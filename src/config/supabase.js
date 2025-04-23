@@ -1,9 +1,5 @@
-// config/supabase.js
 import { createClient } from '@supabase/supabase-js';
 
-/**
- * Validate required environment variables
- */
 const validateEnv = () => {
   if (!import.meta.env.VITE_SUPABASE_URL) {
     throw new Error('VITE_SUPABASE_URL environment variable is not set');
@@ -15,20 +11,14 @@ const validateEnv = () => {
 
 validateEnv();
 
-/**
- * Supabase client configuration
- */
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
 
 const defaultOptions = {
-  db: {
-    schema: 'public',
-  },
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: true,
+    detectSessionInUrl: false, // Changed to false
     flowType: 'pkce',
   },
   global: {
@@ -38,9 +28,6 @@ const defaultOptions = {
   },
 };
 
-/**
- * Create and export Supabase client instance
- */
 export const supabase = createClient(supabaseUrl, supabaseKey, defaultOptions);
 
 /**

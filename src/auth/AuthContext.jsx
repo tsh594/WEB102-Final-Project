@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../config/supabase';
 
@@ -8,8 +8,13 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const initialized = useRef(false);
 
   useEffect(() => {
+    // Singleton pattern for initialization
+    if (initialized.current) return;
+    initialized.current = true;
+
     const getSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
@@ -19,37 +24,34 @@ export const AuthProvider = ({ children }) => {
     getSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-      
-      if (event === 'SIGNED_IN') {
-        navigate('/');
+      // Only update state if there's an actual change
+      if (session?.user?.id !== user?.id) {
+        setUser(session?.user ?? null);
       }
+      setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+    return () => {
+      if (subscription) subscription.unsubscribe();
+    };
+  }, []); // Removed navigate from dependencies
 
   const login = async (email, password) => {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-      if (error) {
-        if (error.message.includes('Email not confirmed')) {
-          throw new Error('Please verify your email before signing in. Check your inbox.');
-        }
-        throw error;
+    if (error) {
+      if (error.message.includes('Email not confirmed')) {
+        throw new Error('Please verify your email before signing in. Check your inbox.');
       }
-
-      return data;
-    } catch (error) {
-      console.error('Login error:', error);
       throw error;
     }
+
+    return data;
   };
+
 
   const logout = async () => {
     try {
@@ -122,7 +124,7 @@ export const AuthProvider = ({ children }) => {
         loading,
       }}
     >
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };
