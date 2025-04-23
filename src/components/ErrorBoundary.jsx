@@ -1,29 +1,29 @@
-import React, { Component } from 'react'; // Add missing React import
+// components/ErrorBoundary.jsx
+import { Component } from 'react';
 
 class ErrorBoundary extends Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false };
-  }
-
+  state = { error: null };
+  
   static getDerivedStateFromError(error) {
-    return { hasError: true };
+    return { error };
   }
 
-  componentDidCatch(error, errorInfo) {
-    console.error('Error boundary caught:', error, errorInfo);
+  componentDidCatch(error, info) {
+    console.error('Error Boundary:', error, info);
   }
 
   render() {
-    if (this.state.hasError) {
+    if (this.state.error) {
       return (
-        <div className="p-4 bg-red-100 text-red-700">
-          <h2 className="text-xl font-bold">Something went wrong</h2>
-          <p>Please try refreshing the page</p>
+        <div className="error-boundary">
+          <h2>Something went wrong</h2>
+          <p>{this.state.error.message}</p>
+          <button onClick={() => window.location.reload()}>
+            Refresh Page
+          </button>
         </div>
       );
     }
-
     return this.props.children;
   }
 }

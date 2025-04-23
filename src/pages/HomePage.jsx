@@ -42,22 +42,22 @@ const HomePage = () => {
         setLoading(true);
         
         let query = supabase
-          .from('posts')
-          .select(`
-            id,
-            title,
-            content,
-            raw_content,
-            category,
-            post_type,
-            urgency_level,
-            is_peer_reviewed,
-            created_at,
-            author:profiles(name)
-          `);
+            .from('posts')
+            .select(`
+              id,
+              title,
+              content,
+              raw_content,
+              post_category,
+              post_type,
+              urgency_level,
+              is_peer_reviewed,
+              created_at,
+              author:profiles!fk_author(name)
+            `);
 
         if (filterCategory !== 'all') {
-          query = query.eq('category', filterCategory);
+          query = query.eq('post_category', filterCategory);
         }
 
         if (filterType !== 'all') {

@@ -1,4 +1,3 @@
-// PostCard.jsx
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { FaEdit, FaTrash, FaEye, FaStethoscope, FaHeart, FaBrain, FaHeadSideVirus, FaProcedures, FaBaby, FaSkull } from 'react-icons/fa';
@@ -20,6 +19,7 @@ const PostCard = ({ post, onDelete }) => {
   };
 
   const getCategoryClass = (category) => {
+    if (!category) return 'badge-general'; // Add null check
     return `badge-${category.toLowerCase()}`;
   };
 
@@ -75,13 +75,15 @@ const PostCard = ({ post, onDelete }) => {
           <span className="post-meta-item">
             {new Date(post.created_at).toLocaleDateString()}
           </span>
-          <span className={`badge ${getCategoryClass(post.category)}`}>
-            {getCategoryIcon(post.category)}
-            {post.category}
+          {/* Changed post.category to post.post_category */}
+          <span className={`badge ${getCategoryClass(post.post_category)}`}>
+            {getCategoryIcon(post.post_category)}
+            {post.post_category}
           </span>
         </div>
 
         <div className="mb-4 line-clamp-3">
+          {/* Added optional chaining for raw_content */}
           {post.raw_content?.substring(0, 200)}{post.raw_content?.length > 200 ? '...' : ''}
         </div>
 

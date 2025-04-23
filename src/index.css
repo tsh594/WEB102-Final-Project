@@ -1479,3 +1479,465 @@ body {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* Add these styles to index.css */
+/* Editor Controls */
+.editor-toolbar {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: var(--light);
+  border-bottom: 1px solid var(--gray);
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.toolbar-button {
+  background: var(--white);
+  border: 1px solid var(--gray);
+  border-radius: 0.25rem;
+  padding: 0.5rem;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  display: flex;
+  align-items: center;
+}
+
+.toolbar-button:hover {
+  background: var(--primary-light);
+  border-color: var(--primary);
+}
+
+.font-selector {
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  border: 1px solid var(--gray);
+  margin-right: 0.5rem;
+  cursor: pointer;
+}
+
+.color-picker {
+  width: 32px;
+  height: 32px;
+  border: none;
+  cursor: pointer;
+  background: none;
+  padding: 0;
+}
+
+.color-picker::-webkit-color-swatch {
+  border-radius: 0.25rem;
+  border: 1px solid var(--gray);
+}
+
+/* Post Form Styling */
+.post-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.form-group input[type="text"],
+.form-group input[type="url"],
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--gray);
+  border-radius: 0.5rem;
+  background: var(--white);
+  transition: var(--transition-fast);
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* Fix Create Post Container */
+.create-post-container {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Medical Term Highlight */
+.medical-term {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: var(--accent);
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.25rem;
+  font-weight: 500;
+}
+
+/* Submit Button Styling */
+.submit-btn {
+  background: var(--primary);
+  color: var(--white);
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: var(--transition-fast);
+}
+
+.submit-btn:hover {
+  background: var(--primary-dark);
+  transform: translateY(-1px);
+}
+
+.submit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Urgency Level Slider */
+input[type="range"] {
+  width: 100%;
+  height: 6px;
+  background: var(--gray);
+  border-radius: 3px;
+  margin: 1rem 0;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  background: var(--primary);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+
+/* Add to index.css */
+/* Editor Controls */
+.editor-toolbar {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: var(--light);
+  border-bottom: 1px solid var(--gray);
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.toolbar-button {
+  background: var(--white);
+  border: 1px solid var(--gray);
+  border-radius: 0.25rem;
+  padding: 0.5rem;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  display: flex;
+  align-items: center;
+}
+
+.toolbar-button:hover {
+  background: var(--primary-light);
+  border-color: var(--primary);
+}
+
+.font-selector {
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  border: 1px solid var(--gray);
+  margin-right: 0.5rem;
+  cursor: pointer;
+}
+
+.color-picker {
+  width: 32px;
+  height: 32px;
+  border: none;
+  cursor: pointer;
+  background: none;
+  padding: 0;
+}
+
+.color-picker::-webkit-color-swatch {
+  border-radius: 0.25rem;
+  border: 1px solid var(--gray);
+}
+
+/* Form Checkbox */
+.form-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.form-checkbox-input {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--primary);
+}
+
+.form-checkbox-label {
+  font-size: 0.95rem;
+  color: var(--dark);
+}
+
+/* Urgency Level Styling */
+.urgency-control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.urgency-level-display {
+  font-size: 0.9rem;
+  color: var(--primary-dark);
+  font-weight: 500;
+  text-align: center;
+  padding: 0.5rem;
+  background: var(--primary-light);
+  border-radius: 0.5rem;
+}
+
+/* Peer Reviewed Checkbox Styling */
+/* Update existing checkbox styles */
+.form-checkbox {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 0.75rem;
+  background: var(--light);
+  border-radius: 0.5rem;
+}
+
+.form-checkbox-label {
+  order: 1;
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--dark);
+}
+
+.form-checkbox-input {
+  order: 2;
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: var(--primary);
+}
+
+/* Peer Reviewed Control container */
+.peer-reviewed-control {
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+/* Form Row adjustment */
+.form-row .form-group {
+  flex: 1;
+  margin: 0;
+}
+
+.form-checkbox {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 0.75rem;
+  background: var(--light);
+  border-radius: 0.5rem;
+  gap: 1rem;
+}
+
+.form-checkbox-label {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--dark);
+  white-space: nowrap; /* Prevent text wrapping */
+}
+
+.form-checkbox-input {
+  flex-shrink: 0; /* Prevent checkbox from shrinking */
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: var(--primary);
+}
+
+.peer-reviewed-control {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+
+
+/* Add these to your existing index.css */
+
+/* Post Page Specific Styles */
+.post-page {
+  padding: 2rem;
+  margin: 2rem auto;
+  max-width: 1200px;
+}
+
+.post-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem 0;
+  border-bottom: 2px solid var(--gray);
+}
+
+.post-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--gray-dark);
+}
+
+/* Peer Reviewed Checkbox Container */
+.peer-reviewed-control {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 0.75rem;
+  background: var(--light);
+  border-radius: 0.5rem;
+}
+
+/* Urgency Level Styles */
+.urgency-control {
+  width: 100%;
+  margin: 1rem 0;
+}
+
+.urgency-level-display {
+  text-align: center;
+  padding: 0.5rem;
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  border-radius: 0.5rem;
+  margin-top: 0.5rem;
+  font-weight: 500;
+}
+
+/* Medical References Box */
+.references-box {
+  background: var(--light);
+  border-left: 4px solid var(--accent);
+  padding: 1rem;
+  border-radius: 0.5rem;
+}
+
+/* Image Container */
+.post-image-container {
+  border-radius: 1rem;
+  overflow: hidden;
+  margin: 2rem 0;
+}
+
+/* Content Styles */
+.post-content {
+  line-height: 1.7;
+  font-size: 1.1rem;
+}
+
+/* Action Buttons Container */
+.post-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 2rem;
+}
+
+/* Loading State */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+}
+
+/* Error Message */
+.error-message {
+  background: var(--danger-light);
+  color: var(--danger);
+  padding: 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--danger);
+  margin: 2rem 0;
+}
+
+/* Category Badge Enhancements */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .post-page {
+    padding: 1rem;
+  }
+  
+  .post-actions {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .post-meta {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .peer-reviewed-control {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}
+
+
+
+/* Error Boundary Styling */
+.error-boundary {
+  padding: 2rem;
+  background: var(--danger-light);
+  border: 2px solid var(--danger);
+  border-radius: 0.5rem;
+  max-width: 600px;
+  margin: 2rem auto;
+  text-align: center;
+}
+
+.error-boundary button {
+  margin-top: 1rem;
+  background: var(--danger);
+  color: white;
+}
+
+/* Query Error Highlighting */
+.query-error {
+  padding: 1rem;
+  background: var(--warning-light);
+  border-left: 4px solid var(--warning);
+  margin: 1rem 0;
+}

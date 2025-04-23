@@ -9,6 +9,7 @@ const PostPage = () => {
   const { user } = useAuth();
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const handleDelete = async () => {
@@ -22,6 +23,7 @@ const PostPage = () => {
         navigate('/');
       } catch (error) {
         console.error('Error deleting post:', error);
+        setError('Failed to delete post');
       }
     }
   };
@@ -34,7 +36,7 @@ const PostPage = () => {
           .from('posts')
           .select(`
             *,
-            author:profiles(name)
+            author:profiles!fk_author(name)
           `)
           .eq('id', id)
           .single();
@@ -43,6 +45,7 @@ const PostPage = () => {
         setPost(data);
       } catch (error) {
         console.error('Error fetching post:', error);
+        setError(error.message);
       } finally {
         setLoading(false);
       }
@@ -50,23 +53,6 @@ const PostPage = () => {
 
     fetchPost();
   }, [id]);
-
-  if (loading) return (
-    <div className="loading-container">
-      <div className="loading-spinner"></div>
-      <p className="mt-4">Loading post...</p>
-    </div>
-  );
-
-  if (!post) return (
-    <div className="glass-panel p-8 text-center">
-      <p>Post not found</p>
-      <Link to="/" className="btn btn-primary mt-4">
-        <FaArrowLeft className="mr-2" />
-        Back to homepage
-      </Link>
-    </div>
-  );
 
   const getCategoryIcon = (category) => {
     const icons = {
@@ -82,8 +68,36 @@ const PostPage = () => {
   };
 
   const getCategoryClass = (category) => {
+    if (!category) return 'badge-general';
     return `badge-${category.toLowerCase()}`;
   };
+
+  if (loading) return (
+    <div className="loading-container">
+      <div className="loading-spinner"></div>
+      <p className="mt-4">Loading post...</p>
+    </div>
+  );
+
+  if (error) return (
+    <div className="glass-panel p-8 text-center">
+      <p className="text-danger mb-4">{error}</p>
+      <Link to="/" className="btn btn-primary">
+        <FaArrowLeft className="mr-2" />
+        Back to homepage
+      </Link>
+    </div>
+  );
+
+  if (!post) return (
+    <div className="glass-panel p-8 text-center">
+      <p>Post not found</p>
+      <Link to="/" className="btn btn-primary mt-4">
+        <FaArrowLeft className="mr-2" />
+        Back to homepage
+      </Link>
+    </div>
+  );
 
   return (
     <div className="glass-panel post-page">
@@ -115,32 +129,37 @@ const PostPage = () => {
 
       <h1 className="text-3xl font-bold mb-4">{post.title}</h1>
 
-      <div className="post-meta">
-        <span className="post-meta-item">
-          {post.author?.name || 'Anonymous'}
-        </span>
-        <span className="post-meta-item">
-          Posted on {new Date(post.created_at).toLocaleDateString()}
-        </span>
-        {post.updated_at && (
+      <div className="post-meta flex flex-wrap gap-4 items-center mb-6">
+        <div className="flex items-center gap-4">
           <span className="post-meta-item">
-            Updated on {new Date(post.updated_at).toLocaleDateString()}
+            {post.author?.name || 'Anonymous'}
           </span>
-        )}
-        <span className={`badge ${post.post_type === 'Case Study' ? 'badge-oncology' : 
-                         post.post_type === 'Research' ? 'badge-surgery' : 
-                         'badge-general'}`}>
-          {post.post_type}
-        </span>
-        <span className={`badge ${getCategoryClass(post.category)}`}>
-          {getCategoryIcon(post.category)}
-          {post.category}
-        </span>
-        {post.is_peer_reviewed && (
-          <span className="badge badge-peer-reviewed">
-            Peer Reviewed
+          <span className="post-meta-item">
+            Posted on {new Date(post.created_at).toLocaleDateString()}
           </span>
-        )}
+          {post.updated_at && (
+            <span className="post-meta-item">
+              Updated on {new Date(post.updated_at).toLocaleDateString()}
+            </span>
+          )}
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <span className={`badge ${post.post_type === 'Case Study' ? 'badge-oncology' : 
+                          post.post_type === 'Research' ? 'badge-surgery' : 
+                          'badge-general'}`}>
+            {post.post_type}
+          </span>
+          <span className={`badge ${getCategoryClass(post.post_category)}`}>
+            {getCategoryIcon(post.post_category)}
+            {post.post_category}
+          </span>
+          {post.is_peer_reviewed && (
+            <span className="badge badge-peer-reviewed">
+              Peer Reviewed
+            </span>
+          )}
+        </div>
       </div>
 
       {post.image_url && (
@@ -159,7 +178,7 @@ const PostPage = () => {
       />
 
       {post.medical_references && (
-        <div className="bg-blue-50 rounded-lg p-6 mb-6">
+        <div className="references-box bg-blue-50 rounded-lg p-6 mb-6">
           <h3 className="text-xl font-semibold mb-4">Medical References</h3>
           <div className="whitespace-pre-line">
             {post.medical_references}

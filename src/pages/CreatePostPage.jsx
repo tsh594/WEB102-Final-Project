@@ -24,7 +24,8 @@ const CreatePostPage = () => {
         .from('posts')
         .insert({
           ...formData,
-          author_id: user.id
+          author_id: user.id,
+          raw_content: formData.raw_content // Match database column name
         })
         .select();
 
