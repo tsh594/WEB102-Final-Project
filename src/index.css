@@ -152,7 +152,7 @@ h4 { font-size: 1.5rem; }
   line-height: 36px;        /* Vertical centering */
   cursor: pointer;
   transition: all 0.2s ease;
-  border: 2px solid blue; /* Temporary debug */
+  /*border: 2px solid blue; /* Temporary debug */
 
 }
 
