@@ -1,12 +1,14 @@
-import { Navigate } from 'react-router-dom';
+// components/PrivateRoute.jsx
+import { Outlet, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 
-const PrivateRoute = ({ children }) => {
+const PrivateRoute = () => {
   const { user, loading } = useAuth();
-  
-  if (loading) return <div>Loading...</div>;
-  
-  return user ? children : <Navigate to="/login" state={{ from: location }} replace />;
+  const location = useLocation();
+
+  if (loading) return <div className="loading-spinner-container" />;
+
+  return user ? <Outlet /> : <Navigate to="/login" state={{ from: location }} replace />;
 };
 
 export default PrivateRoute;

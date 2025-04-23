@@ -1243,12 +1243,39 @@ body {
 }
 
 /* Create Post Page */
+/* Add to index.css */
 .create-post-container {
   max-width: 800px;
-  margin: 0 auto;
-  padding: 20px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
+.page-heading {
+  font-size: 2.25rem;
+  color: var(--primary-dark);
+  margin-bottom: 2rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+.error-banner {
+  padding: 1rem;
+  background: var(--danger-light);
+  color: var(--danger);
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  border: 1px solid var(--danger);
+}
+
+.loading-spinner-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
 /* Post Form Styles */
 .post-form {
   max-width: 800px;
@@ -1430,4 +1457,25 @@ body {
   color: #1e40af;
   padding: 0.2rem 0.4rem;
   border-radius: 0.25rem;
+}
+
+
+.loading-spinner-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--primary-light);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }

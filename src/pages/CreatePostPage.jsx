@@ -40,8 +40,8 @@ const CreatePostPage = () => {
   };
 
   return (
-    <div className="page-container">
-      <h1>Create New Post</h1>
+    <div className="create-post-container glass-panel">
+      <h1 className="page-title">Create New Post</h1>
       {error && <div className="error-message">{error}</div>}
       <PostForm 
         onSubmit={handleSubmit}
