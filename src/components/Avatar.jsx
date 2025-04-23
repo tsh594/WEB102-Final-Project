@@ -1,7 +1,10 @@
-// Avatar.jsx
+import { useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 
 const Avatar = ({ user, size = 'md', imageUrl, onClick }) => {
+  const [imgError, setImgError] = useState(false);
+  const { user: authUser } = useAuth();
+
   const getInitials = (name) => {
     if (!name) return 'US';
     const names = name.trim().split(' ');
@@ -12,34 +15,37 @@ const Avatar = ({ user, size = 'md', imageUrl, onClick }) => {
       .slice(0, 2);
   };
 
-  const sizeClasses = {
-    sm: 'avatar-sm',
-    md: 'avatar-md',
-    lg: 'avatar-lg',
-    xl: 'avatar-xl'
-  };
+  // Get user data from multiple possible sources
+  const userName = user?.user_metadata?.name || 
+                 user?.user_metadata?.full_name || 
+                 authUser?.user_metadata?.name || 
+                 'User';
 
-  const statusClasses = user ? 'avatar-online' : '';
   const avatarImage = imageUrl || user?.user_metadata?.avatar_url;
+  const statusClass = user ? 'avatar-online' : '';
+  const sizeClass = `avatar-${size}`;
+
+  // Add cache busting query parameter
+  const imageWithCacheBust = avatarImage ? 
+    `${avatarImage}?${new Date().getTime()}` : 
+    null;
 
   return (
     <div 
-      className={`avatar ${sizeClasses[size]} ${statusClasses} fixed top-4 right-4`}
+      className={`avatar ${sizeClass} ${statusClass} avatar-fixed`}
       onClick={onClick}
       tabIndex={onClick ? 0 : -1}
     >
-      {avatarImage ? (
+      {imageWithCacheBust && !imgError ? (
         <img 
-          src={avatarImage} 
+          src={imageWithCacheBust}
           alt="Profile" 
           className="avatar-img"
-          onError={(e) => {
-            e.target.style.display = 'none';
-          }}
+          onError={() => setImgError(true)}
         />
       ) : (
         <span className="avatar-initials">
-          {getInitials(user?.user_metadata?.name)}
+          {getInitials(userName)}
         </span>
       )}
     </div>
