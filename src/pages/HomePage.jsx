@@ -95,7 +95,7 @@ const HomePage = () => {
         {user && (
           <Link
             to="/posts/new"
-            className="btn btn-primary"
+            className="btn btn-secondary-a"
           >
             Create New Post
           </Link>

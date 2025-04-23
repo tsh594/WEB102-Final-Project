@@ -1,5 +1,4 @@
-// EditPostPage.jsx (final version)
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { supabase } from '../config/supabase';
@@ -10,9 +9,8 @@ const EditPostPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [post, setPost] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [fetching, setFetching] = useState(true);
-  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const fetchPost = async () => {
@@ -29,16 +27,11 @@ const EditPostPage = () => {
           return;
         }
 
-        setPost({
-          ...data,
-          post_category: data.category,
-          rawContent: data.raw_content
-        });
-      } catch (error) {
-        setError(error.message);
-        navigate('/');
+        setPost(data);
+      } catch (err) {
+        setError(err.message);
       } finally {
-        setFetching(false);
+        setLoading(false);
       }
     };
 
@@ -46,71 +39,38 @@ const EditPostPage = () => {
   }, [id, user, navigate]);
 
   const handleSubmit = async (formData) => {
-    if (!user) return;
-    
-    setLoading(true);
     try {
+      setLoading(true);
+      setError('');
+      
       const { error } = await supabase
         .from('posts')
-        .update({
-          title: formData.title,
-          content: formData.content,
-          raw_content: formData.rawContent,
-          category: formData.post_category,
-          is_peer_reviewed: formData.is_peer_reviewed,
-          image_url: formData.image_url,
-          post_type: formData.post_type,
-          urgency_level: formData.urgency_level,
-          medical_references: formData.medical_references,
-          updated_at: new Date().toISOString()
-        })
+        .update(formData)
         .eq('id', id);
 
       if (error) throw error;
       navigate(`/posts/${id}`);
-    } catch (error) {
-      setError(error.message);
+    } catch (err) {
+      setError(err.message || 'Failed to update post');
     } finally {
       setLoading(false);
     }
   };
 
-  if (fetching) return (
-    <div className="loading-container">
-      <div className="loading-spinner"></div>
-      <p>Loading post...</p>
-    </div>
-  );
-
-  if (error) return (
-    <div className="glass-panel p-8 text-center">
-      <div className="text-red-600 font-semibold mb-4">{error}</div>
-      <button 
-        onClick={() => navigate('/')} 
-        className="btn btn-primary"
-      >
-        Return to Home
-      </button>
-    </div>
-  );
+  if (loading) return <div>Loading post...</div>;
+  if (error) return <div>Error: {error}</div>;
 
   return (
-    <div className="container">
-      <div className="glass-panel p-6">
-        <h1 className="text-2xl font-bold mb-6">Edit Post</h1>
-        {post ? (
-          <PostForm 
-            post={post}
-            onSubmit={handleSubmit} 
-            isEditMode={true}
-            loading={loading}
-          />
-        ) : (
-          <div className="text-center py-8 text-gray-600">
-            Post data not available
-          </div>
-        )}
-      </div>
+    <div className="page-container">
+      <h1>Edit Post</h1>
+      {post && (
+        <PostForm 
+          post={post}
+          onSubmit={handleSubmit}
+          isEditMode={true}
+          loading={loading}
+        />
+      )}
     </div>
   );
 };

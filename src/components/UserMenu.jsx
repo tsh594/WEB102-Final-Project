@@ -1,7 +1,5 @@
-// UserMenu.jsx
 import { useRef, useState, useEffect } from 'react';
 import { useAuth } from '../auth/AuthContext';
-import { supabase } from '../config/supabase';
 import { useNavigate } from 'react-router-dom';
 import Avatar from './Avatar';
 

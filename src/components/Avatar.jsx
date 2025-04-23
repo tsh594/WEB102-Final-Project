@@ -24,7 +24,7 @@ const Avatar = ({ user, size = 'md', imageUrl, onClick }) => {
 
   return (
     <div 
-      className={`avatar ${sizeClasses[size]} ${statusClasses}`}
+      className={`avatar ${sizeClasses[size]} ${statusClasses} fixed top-4 right-4`}
       onClick={onClick}
       tabIndex={onClick ? 0 : -1}
     >

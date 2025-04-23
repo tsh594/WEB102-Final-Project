@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import React, { Component } from 'react'; // Add missing React import
 
 class ErrorBoundary extends Component {
   constructor(props) {
