@@ -1,31 +1,44 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { 
-  FaBold, 
-  FaItalic, 
-  FaUnderline, 
-  FaListUl, 
-  FaListOl,
-  FaLink,
-  FaStethoscope,
-  FaSave
+  FaBold, FaItalic, FaUnderline, FaListUl, FaListOl, 
+  FaLink, FaStethoscope, FaSave, FaFont, FaPalette
 } from 'react-icons/fa';
-import { MdFormatColorText, MdFormatClear } from 'react-icons/md';
+import { MdFormatClear } from 'react-icons/md';
 
 const PostForm = ({ post, onSubmit, isEditMode, loading }) => {
   const editorRef = useRef(null);
   const [formData, setFormData] = useState({
-    title: post?.title || '',
-    content: post?.content || '',
-    rawContent: post?.rawContent || '',
-    post_category: post?.post_category || 'General',
-    is_peer_reviewed: post?.is_peer_reviewed || false,
-    image_url: post?.image_url || '',
-    post_type: post?.post_type || 'Discussion',
-    urgency_level: post?.urgency_level || 0,
-    medical_references: post?.medical_references || ''
+    title: '',
+    content: '',
+    raw_content: '',
+    post_category: 'General',
+    is_peer_reviewed: false,
+    image_url: '',
+    post_type: 'Discussion',
+    urgency_level: 0,
+    medical_references: ''
   });
-
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (post) {
+      setFormData({
+        title: post.title || '',
+        content: post.content || '',
+        raw_content: post.raw_content || '',
+        post_category: post.post_category || 'General',
+        is_peer_reviewed: post.is_peer_reviewed || false,
+        image_url: post.image_url || '',
+        post_type: post.post_type || 'Discussion',
+        urgency_level: post.urgency_level || 0,
+        medical_references: post.medical_references || ''
+      });
+      
+      if (editorRef.current) {
+        editorRef.current.innerHTML = post.content || '';
+      }
+    }
+  }, [post]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -40,7 +53,7 @@ const PostForm = ({ post, onSubmit, isEditMode, loading }) => {
       setFormData(prev => ({
         ...prev,
         content: editorRef.current.innerHTML,
-        rawContent: editorRef.current.innerText
+        raw_content: editorRef.current.innerText
       }));
     }
   };
@@ -65,91 +78,105 @@ const PostForm = ({ post, onSubmit, isEditMode, loading }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.title.trim() || !formData.content.trim()) {
-      setError('Title and content are required');
+    if (!formData.title.trim()) {
+      setError('Title is required');
+      return;
+    }
+    if (!formData.content.trim() || formData.content === '<div><br></div>') {
+      setError('Content is required');
       return;
     }
     onSubmit(formData);
   };
 
-  useEffect(() => {
-    if (editorRef.current && post?.content) {
-      editorRef.current.innerHTML = post.content;
-    }
-  }, [post]);
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {error && <div className="text-red-600 mb-4">{error}</div>}
+    <form onSubmit={handleSubmit} className="post-form">
+      {error && <div className="form-error">{error}</div>}
 
       <div className="form-group">
         <label className="form-label">Title *</label>
         <input
           type="text"
           name="title"
+          className="form-control"
           value={formData.title}
           onChange={handleChange}
-          className="form-input"
           required
         />
       </div>
 
       <div className="form-group">
         <label className="form-label">Content *</label>
-        <div className="content-editor-container">
-          <div className="content-editor-toolbar">
-            <button type="button" onClick={() => formatText('bold')} title="Bold">
+        <div className="editor-container">
+          <div className="editor-toolbar">
+            <select 
+              className="font-selector"
+              onChange={(e) => formatText('fontName', e.target.value)}
+            >
+              <option value="Arial">Arial</option>
+              <option value="Times New Roman">Times</option>
+              <option value="Courier New">Courier</option>
+              <option value="Georgia">Georgia</option>
+            </select>
+
+            <input
+              type="color"
+              className="color-picker"
+              onChange={(e) => formatText('foreColor', e.target.value)}
+            />
+
+            <button type="button" className="toolbar-button" onClick={() => formatText('bold')}>
               <FaBold />
             </button>
-            <button type="button" onClick={() => formatText('italic')} title="Italic">
+            <button type="button" className="toolbar-button" onClick={() => formatText('italic')}>
               <FaItalic />
             </button>
-            <button type="button" onClick={() => formatText('underline')} title="Underline">
+            <button type="button" className="toolbar-button" onClick={() => formatText('underline')}>
               <FaUnderline />
             </button>
-            <button type="button" onClick={() => formatText('insertUnorderedList')} title="Bullet List">
+            <button type="button" className="toolbar-button" onClick={() => formatText('insertUnorderedList')}>
               <FaListUl />
             </button>
-            <button type="button" onClick={() => formatText('insertOrderedList')} title="Numbered List">
+            <button type="button" className="toolbar-button" onClick={() => formatText('insertOrderedList')}>
               <FaListOl />
             </button>
-            <button type="button" onClick={() => formatText('createLink', prompt('Enter URL:'))} title="Insert Link">
+            <button type="button" className="toolbar-button" onClick={() => formatText('createLink', prompt('Enter URL:'))}>
               <FaLink />
             </button>
-            <button type="button" onClick={insertMedicalTerm} title="Mark as Medical Term">
+            <button type="button" className="toolbar-button" onClick={insertMedicalTerm}>
               <FaStethoscope />
             </button>
-            <button type="button" onClick={() => formatText('removeFormat')} title="Clear Formatting">
+            <button type="button" className="toolbar-button" onClick={() => formatText('removeFormat')}>
               <MdFormatClear />
             </button>
           </div>
           <div
-            className="content-editor"
+            className="editor-content"
             ref={editorRef}
             contentEditable
             onInput={handleEditorChange}
+            dangerouslySetInnerHTML={{ __html: formData.content }}
           />
         </div>
       </div>
 
-      {/* Rest of the form fields */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="form-row">
         <div className="form-group">
           <label className="form-label">Category *</label>
           <select
             name="post_category"
+            className="form-control"
             value={formData.post_category}
             onChange={handleChange}
-            className="form-input"
             required
           >
             <option value="General">General</option>
             <option value="Cardiology">Cardiology</option>
             <option value="Oncology">Oncology</option>
-            <option value="Pediatrics">Pediatrics</option>
             <option value="Neurology">Neurology</option>
-            <option value="Surgery">Surgery</option>
             <option value="Psychiatry">Psychiatry</option>
+            <option value="Surgery">Surgery</option>
+            <option value="Pediatrics">Pediatrics</option>
             <option value="Radiology">Radiology</option>
           </select>
         </div>
@@ -158,9 +185,9 @@ const PostForm = ({ post, onSubmit, isEditMode, loading }) => {
           <label className="form-label">Post Type *</label>
           <select
             name="post_type"
+            className="form-control"
             value={formData.post_type}
             onChange={handleChange}
-            className="form-input"
             required
           >
             <option value="Discussion">Discussion</option>
@@ -171,29 +198,42 @@ const PostForm = ({ post, onSubmit, isEditMode, loading }) => {
         </div>
       </div>
 
-      <div className="form-group">
-        <label className="form-label">Urgency Level: {formData.urgency_level}</label>
-        <input
-          type="range"
-          name="urgency_level"
-          min="0"
-          max="5"
-          value={formData.urgency_level}
-          onChange={handleChange}
-          className="w-full"
-        />
-      </div>
+      <div className="form-row">
+        <div className="form-group">
+          <label className="form-label">Urgency Level</label>
+          <div className="urgency-control">
+            <input
+              type="range"
+              name="urgency_level"
+              className="form-range"
+              min="0"
+              max="5"
+              value={formData.urgency_level}
+              onChange={handleChange}
+            />
+            <div className="urgency-level-display">
+              Current Level: {formData.urgency_level}
+            </div>
+          </div>
+        </div>
 
-      <div className="form-group flex items-center">
-        <input
-          type="checkbox"
-          id="peer-reviewed"
-          name="is_peer_reviewed"
-          checked={formData.is_peer_reviewed}
-          onChange={handleChange}
-          className="mr-2"
-        />
-        <label htmlFor="peer-reviewed">Peer Reviewed Content</label>
+        <div className="form-group">
+          <div className="peer-reviewed-control">
+            <div className="form-checkbox">
+              <label htmlFor="peer-reviewed" className="form-checkbox-label">
+                Peer Reviewed Content
+              </label>
+              <input
+                type="checkbox"
+                id="peer-reviewed"
+                className="form-checkbox-input"
+                name="is_peer_reviewed"
+                checked={formData.is_peer_reviewed}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="form-group">
@@ -201,9 +241,9 @@ const PostForm = ({ post, onSubmit, isEditMode, loading }) => {
         <input
           type="url"
           name="image_url"
+          className="form-control"
           value={formData.image_url}
           onChange={handleChange}
-          className="form-input"
         />
       </div>
 
@@ -211,19 +251,15 @@ const PostForm = ({ post, onSubmit, isEditMode, loading }) => {
         <label className="form-label">Medical References (optional)</label>
         <textarea
           name="medical_references"
+          className="form-control"
           value={formData.medical_references}
           onChange={handleChange}
-          className="form-textarea"
           rows="3"
         />
       </div>
 
-      <button
-        type="submit"
-        className="btn btn-primary"
-        disabled={loading}
-      >
-        <FaSave className="mr-2" />
+      <button type="submit" disabled={loading} className="submit-btn">
+        <FaSave className="btn-icon" />
         {loading ? (
           <span>{isEditMode ? 'Updating...' : 'Publishing...'}</span>
         ) : (

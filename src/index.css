@@ -3718,3 +3718,29 @@ option.category-radiology { background-color: #f1f5f9; }
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
+
+
+/*
+  Add the following to your src/index.css:
+*/
+
+/* index.css */
+.post-form {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+.form-group { margin-bottom: 1rem; }
+.form-label { display: block; margin-bottom: 0.5rem; font-weight: bold; }
+.form-input, .form-textarea, .toolbar-select { width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; }
+.form-input-range { width: 100%; }
+.content-editor-container { border: 1px solid #ccc; border-radius: 4px; }
+.content-editor-toolbar { display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 0.5rem; background: #f9f9f9; border-bottom: 1px solid #ddd; }
+.content-editor { min-height: 200px; padding: 1rem; outline: none; }
+.btn-primary { background-color: #2563eb; color: white; padding: 0.5rem 1rem; border: none; border-radius: 4px; display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.error-text { color: #dc2626; font-weight: bold; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.form-group-inline { display: flex; align-items: center; gap: 0.5rem; }
+.medical-term { background-color: #fffbdd; padding: 0 2px; border-radius: 2px; }
+.content-editor ul, .content-editor ol { list-style-position: inside; font-size: inherit; margin-left: 0; padding-left: 1rem; }
