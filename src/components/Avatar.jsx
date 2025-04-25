@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 
-const Avatar = ({ user, size = 'md', imageUrl, onClick }) => {
+const Avatar = ({ user, size = 'md', onClick }) => {
   const [imgError, setImgError] = useState(false);
   const { user: authUser } = useAuth();
 
@@ -16,29 +16,35 @@ const Avatar = ({ user, size = 'md', imageUrl, onClick }) => {
   };
 
   // Get user data from multiple possible sources
-  const userName = user?.user_metadata?.name || 
+  const userName = user?.name || 
+                 user?.user_metadata?.name || 
                  user?.user_metadata?.full_name || 
                  authUser?.user_metadata?.name || 
                  'User';
 
-  const avatarImage = imageUrl || user?.user_metadata?.avatar_url;
-  const statusClass = user ? 'avatar-online' : '';
-  const sizeClass = `avatar-${size}`;
+  const avatarImage = user?.avatar_url || 
+                    user?.user_metadata?.avatar_url;
+  
+  // Size classes mapping
+  const sizeClass = {
+    sm: 'avatar-sm',
+    md: 'avatar-md',
+    lg: 'avatar-lg',
+    xl: 'avatar-xl'
+  }[size] || 'avatar-md';
 
-  // Add cache busting query parameter
-  const imageWithCacheBust = avatarImage ? 
-    `${avatarImage}?${new Date().getTime()}` : 
-    null;
+  // Status indicator if user is online
+  const statusClass = user ? 'avatar-online' : '';
 
   return (
     <div 
-      className={`avatar ${sizeClass} ${statusClass} avatar-fixed`}
+      className={`avatar ${sizeClass} ${statusClass}`}
       onClick={onClick}
       tabIndex={onClick ? 0 : -1}
     >
-      {imageWithCacheBust && !imgError ? (
+      {avatarImage && !imgError ? (
         <img 
-          src={imageWithCacheBust}
+          src={avatarImage}
           alt="Profile" 
           className="avatar-img"
           onError={() => setImgError(true)}

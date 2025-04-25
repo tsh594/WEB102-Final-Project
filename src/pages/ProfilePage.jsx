@@ -1,16 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { supabase } from '../config/supabase';
 import Avatar from '../components/Avatar';
 import AvatarUpload from '../components/AvatarUpload';
+import '../index.css';
 
 const ProfilePage = () => {
   const { user } = useAuth();
-  const [profile, setProfile] = useState({ 
-    name: '', 
-    avatar_url: '', 
-    font_settings: {} 
-  });
+  const [profile, setProfile] = useState({ name: '', avatar_url: '', font_settings: {} });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -21,6 +18,8 @@ const ProfilePage = () => {
     weight: 400,
     style: 'normal'
   });
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const fontDebounce = useRef(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -30,9 +29,8 @@ const ProfilePage = () => {
           .select('*')
           .eq('id', user.id)
           .single();
-
         if (error) throw error;
-        
+
         setProfile(data);
         if (data.font_settings) {
           setFontSettings({
@@ -54,29 +52,27 @@ const ProfilePage = () => {
   }, [user]);
 
   useEffect(() => {
-    const applyFontSettings = () => {
-      document.documentElement.style.setProperty('--font-family', fontSettings.family);
-      document.documentElement.style.setProperty('--font-size', `${fontSettings.size}px`);
-      document.documentElement.style.setProperty('--font-color', fontSettings.color);
-      document.documentElement.style.setProperty('--font-weight', fontSettings.weight);
-      document.documentElement.style.setProperty('--font-style', fontSettings.style);
-    };
-
-    applyFontSettings();
+    document.documentElement.style.setProperty('--font-family', fontSettings.family);
+    document.documentElement.style.setProperty('--font-size', `${fontSettings.size}px`);
+    document.documentElement.style.setProperty('--font-color', fontSettings.color);
+    document.documentElement.style.setProperty('--font-weight', fontSettings.weight);
+    document.documentElement.style.setProperty('--font-style', fontSettings.style);
   }, [fontSettings]);
+
+  useEffect(() => {
+    return () => {
+      if (fontDebounce.current) clearTimeout(fontDebounce.current);
+    };
+  }, []);
 
   const updateProfile = async (updates) => {
     setError('');
     setSuccess('');
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('id', user.id);
-
+      const { error } = await supabase.from('profiles').update(updates).eq('id', user.id);
       if (error) throw error;
-      
-      setProfile(prev => ({ ...prev, ...updates }));
+
+      setProfile((prev) => ({ ...prev, ...updates }));
       setSuccess('Profile updated successfully!');
       return true;
     } catch (err) {
@@ -85,14 +81,21 @@ const ProfilePage = () => {
     }
   };
 
-  const handleFontChange = async (newSettings) => {
-    const updatedSettings = { 
-      ...fontSettings, 
+  const handleFontChange = (newSettings) => {
+    const updatedSettings = {
+      ...fontSettings,
       ...newSettings,
       weight: newSettings.weight ? Number(newSettings.weight) : fontSettings.weight
     };
+
     setFontSettings(updatedSettings);
-    await updateProfile({ font_settings: updatedSettings });
+    setHasUnsavedChanges(true);
+
+    if (fontDebounce.current) clearTimeout(fontDebounce.current);
+    fontDebounce.current = setTimeout(async () => {
+      await updateProfile({ font_settings: updatedSettings });
+      setHasUnsavedChanges(false);
+    }, 1500);
   };
 
   const handleSaveName = async () => {
@@ -103,25 +106,27 @@ const ProfilePage = () => {
     await updateProfile({ name: profile.name.trim() });
   };
 
-  if (loading) return (
-    <div className="loading-container">
-      <div className="loading-spinner"></div>
-      <p>Loading profile...</p>
-    </div>
-  );
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p>Loading profile...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto px-4 py-8 pt-24">
-      <div className="glass-panel p-6 max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold mb-6">My Profile</h1>
-        
-        {error && <div className="error-banner mb-4">{error}</div>}
-        {success && <div className="bg-green-100 text-green-800 p-3 rounded-lg mb-4">{success}</div>}
+    <div className="profile-container">
+      <div className="profile-panel">
+        <h1 className="profile-title">My Profile</h1>
 
-        <div className="flex items-center gap-6 mb-8">
-          <Avatar user={user} size="lg" />
-          <AvatarUpload 
-            user={user} 
+        {error && <div className="error-banner">{error}</div>}
+        {success && <div className="success-banner">{success}</div>}
+
+        <div className="avatar-upload-section">
+          <Avatar user={user} size="xl" />
+          <AvatarUpload
+            user={user}
             onUpload={async (url) => {
               const success = await updateProfile({ avatar_url: url });
               if (success) {
@@ -133,21 +138,24 @@ const ProfilePage = () => {
           />
         </div>
 
-        <div className="space-y-6">
+        <div className="profile-settings-section">
           <div className="form-group">
             <label className="form-label">Display Name</label>
             <input
               type="text"
               value={profile.name}
-              onChange={(e) => setProfile(p => ({ ...p, name: e.target.value }))}
+              onChange={(e) => setProfile((p) => ({ ...p, name: e.target.value }))}
               className="form-control"
               placeholder="Enter your display name"
             />
+            <button onClick={handleSaveName} className="btn" disabled={!profile.name.trim()}>
+              Save Name Changes
+            </button>
           </div>
-          
-          <div className="glass-panel p-4">
-            <h2 className="text-xl font-bold mb-4">Display Settings</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          <div className="display-settings-section">
+            <h2 className="settings-title">Display Settings</h2>
+            <div className="settings-grid">
               <div className="form-group">
                 <label className="form-label">Font Family</label>
                 <select
@@ -162,11 +170,9 @@ const ProfilePage = () => {
                   <option value="Courier New">Courier New</option>
                 </select>
               </div>
-              
+
               <div className="form-group">
-                <label className="form-label">
-                  Font Size ({fontSettings.size}px)
-                </label>
+                <label className="form-label">Font Size ({fontSettings.size}px)</label>
                 <input
                   type="range"
                   min="12"
@@ -176,52 +182,45 @@ const ProfilePage = () => {
                   className="form-range"
                 />
               </div>
-              
+
               <div className="form-group">
                 <label className="form-label">Text Color</label>
                 <input
                   type="color"
                   value={fontSettings.color}
                   onChange={(e) => handleFontChange({ color: e.target.value })}
-                  className="w-full h-10 cursor-pointer"
+                  className="color-picker"
                 />
               </div>
-              
-              <div className="form-group flex items-center gap-4">
-                <div className="flex items-center gap-2">
+
+              <div className="form-group font-options">
+                <label>
                   <input
                     type="checkbox"
                     checked={fontSettings.weight === 700}
-                    onChange={(e) => handleFontChange({ 
-                      weight: e.target.checked ? 700 : 400 
-                    })}
-                    className="form-checkbox"
+                    onChange={(e) =>
+                      handleFontChange({ weight: e.target.checked ? 700 : 400 })
+                    }
                   />
-                  <label className="form-label mb-0">Bold</label>
-                </div>
-                
-                <div className="flex items-center gap-2">
+                  Bold
+                </label>
+                <label>
                   <input
                     type="checkbox"
                     checked={fontSettings.style === 'italic'}
-                    onChange={(e) => handleFontChange({ 
-                      style: e.target.checked ? 'italic' : 'normal'
-                    })}
-                    className="form-checkbox"
+                    onChange={(e) =>
+                      handleFontChange({ style: e.target.checked ? 'italic' : 'normal' })
+                    }
                   />
-                  <label className="form-label mb-0">Italic</label>
-                </div>
+                  Italic
+                </label>
               </div>
             </div>
-          </div>
 
-          <button
-            onClick={handleSaveName}
-            className="btn btn-primary w-full"
-            disabled={!profile.name.trim()}
-          >
-            Save Changes
-          </button>
+            <div className="save-status">
+              {hasUnsavedChanges ? 'Saving changes...' : 'All changes saved'}
+            </div>
+          </div>
         </div>
       </div>
     </div>

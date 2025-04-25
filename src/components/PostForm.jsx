@@ -5,8 +5,108 @@ import {
 } from 'react-icons/fa';
 import { MdFormatClear } from 'react-icons/md';
 
+const useEditorFormatter = (editorRef) => {
+  const format = (formatType, value = null) => {
+    if (!editorRef.current) return;
+    
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return;
+
+    const range = selection.getRangeAt(0);
+    
+    // Handle different formatting types
+    switch (formatType) {
+      case 'bold':
+        toggleInlineStyle(range, 'fontWeight', 'bold');
+        break;
+      case 'italic':
+        toggleInlineStyle(range, 'fontStyle', 'italic');
+        break;
+      case 'underline':
+        toggleInlineStyle(range, 'textDecoration', 'underline');
+        break;
+      case 'list':
+        toggleList(range, value === 'ordered' ? 'ol' : 'ul');
+        break;
+      case 'link':
+        createLink(range, value);
+        break;
+      case 'font':
+        applyFont(range, value);
+        break;
+      case 'color':
+        applyColor(range, value);
+        break;
+      case 'clear':
+        clearFormatting(range);
+        break;
+    }
+  };
+
+  // Helper functions
+  const toggleInlineStyle = (range, style, value) => {
+    const span = document.createElement('span');
+    span.style[style] = value;
+    span.style.direction = 'ltr';
+    span.style.textAlign = 'left';
+    span.style.unicodeBidi = 'plaintext';
+    applyFormat(range, span);
+  };
+
+  const toggleList = (range, listType) => {
+    const list = document.createElement(listType);
+    const li = document.createElement('li');
+    li.style.direction = 'ltr';
+    li.style.textAlign = 'left';
+    li.appendChild(range.extractContents());
+    list.appendChild(li);
+    range.insertNode(list);
+  };
+
+  const createLink = (range, href) => {
+    if (!href) return;
+    const a = document.createElement('a');
+    a.href = href;
+    a.style.direction = 'ltr';
+    a.style.textAlign = 'left';
+    a.appendChild(range.extractContents());
+    range.insertNode(a);
+  };
+
+  const applyFont = (range, font) => {
+    const span = document.createElement('span');
+    span.style.fontFamily = font;
+    span.style.direction = 'ltr';
+    span.style.textAlign = 'left';
+    applyFormat(range, span);
+  };
+
+  const applyColor = (range, color) => {
+    const span = document.createElement('span');
+    span.style.color = color;
+    span.style.direction = 'ltr';
+    span.style.textAlign = 'left';
+    applyFormat(range, span);
+  };
+
+  const clearFormatting = (range) => {
+    const text = range.extractContents().textContent;
+    const textNode = document.createTextNode(text);
+    range.insertNode(textNode);
+  };
+
+  const applyFormat = (range, element) => {
+    element.appendChild(range.extractContents());
+    range.insertNode(element);
+  };
+
+  return { format };
+};
+
 const PostForm = ({ post, onSubmit, isEditMode, loading }) => {
   const editorRef = useRef(null);
+  const { format } = useEditorFormatter(editorRef);
+
   const [formData, setFormData] = useState({
     title: '',
     content: '',
@@ -36,6 +136,10 @@ const PostForm = ({ post, onSubmit, isEditMode, loading }) => {
       
       if (editorRef.current) {
         editorRef.current.innerHTML = post.content || '';
+        // Ensure initial direction is set
+        editorRef.current.style.direction = 'ltr';
+        editorRef.current.style.textAlign = 'left';
+        editorRef.current.style.unicodeBidi = 'plaintext';
       }
     }
   }, [post]);
@@ -58,18 +162,16 @@ const PostForm = ({ post, onSubmit, isEditMode, loading }) => {
     }
   };
 
-  const formatText = (command, value = null) => {
-    document.execCommand(command, false, value);
-    handleEditorChange();
-  };
-
   const insertMedicalTerm = () => {
     const selection = window.getSelection();
     if (selection.toString()) {
+      const range = selection.getRangeAt(0);
       const span = document.createElement('span');
       span.className = 'medical-term';
+      span.style.direction = 'ltr';
+      span.style.textAlign = 'left';
+      span.style.unicodeBidi = 'plaintext';
       span.textContent = selection.toString();
-      const range = selection.getRangeAt(0);
       range.deleteContents();
       range.insertNode(span);
       handleEditorChange();
@@ -111,7 +213,7 @@ const PostForm = ({ post, onSubmit, isEditMode, loading }) => {
           <div className="editor-toolbar">
             <select 
               className="font-selector"
-              onChange={(e) => formatText('fontName', e.target.value)}
+              onChange={(e) => format('font', e.target.value)}
             >
               <option value="Arial">Arial</option>
               <option value="Times New Roman">Times</option>
@@ -122,31 +224,31 @@ const PostForm = ({ post, onSubmit, isEditMode, loading }) => {
             <input
               type="color"
               className="color-picker"
-              onChange={(e) => formatText('foreColor', e.target.value)}
+              onChange={(e) => format('color', e.target.value)}
             />
 
-            <button type="button" className="toolbar-button" onClick={() => formatText('bold')}>
+            <button type="button" onClick={() => format('bold')}>
               <FaBold />
             </button>
-            <button type="button" className="toolbar-button" onClick={() => formatText('italic')}>
+            <button type="button" onClick={() => format('italic')}>
               <FaItalic />
             </button>
-            <button type="button" className="toolbar-button" onClick={() => formatText('underline')}>
+            <button type="button" onClick={() => format('underline')}>
               <FaUnderline />
             </button>
-            <button type="button" className="toolbar-button" onClick={() => formatText('insertUnorderedList')}>
+            <button type="button" onClick={() => format('list', 'unordered')}>
               <FaListUl />
             </button>
-            <button type="button" className="toolbar-button" onClick={() => formatText('insertOrderedList')}>
+            <button type="button" onClick={() => format('list', 'ordered')}>
               <FaListOl />
             </button>
-            <button type="button" className="toolbar-button" onClick={() => formatText('createLink', prompt('Enter URL:'))}>
+            <button type="button" onClick={() => format('link', prompt('Enter URL:'))}>
               <FaLink />
             </button>
-            <button type="button" className="toolbar-button" onClick={insertMedicalTerm}>
+            <button type="button" onClick={insertMedicalTerm}>
               <FaStethoscope />
             </button>
-            <button type="button" className="toolbar-button" onClick={() => formatText('removeFormat')}>
+            <button type="button" onClick={() => format('clear')}>
               <MdFormatClear />
             </button>
           </div>
@@ -154,8 +256,18 @@ const PostForm = ({ post, onSubmit, isEditMode, loading }) => {
             className="editor-content"
             ref={editorRef}
             contentEditable
+            style={{
+              direction: 'ltr',
+              textAlign: 'left',
+              unicodeBidi: 'plaintext',
+              minHeight: '300px',
+              padding: '1rem',
+              border: '1px solid #e2e8f0',
+              borderRadius: '0.5rem'
+            }}
             onInput={handleEditorChange}
             dangerouslySetInnerHTML={{ __html: formData.content }}
+            suppressContentEditableWarning={true}
           />
         </div>
       </div>

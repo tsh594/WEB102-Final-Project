@@ -1,4 +1,5 @@
 import React from 'react';
+import { Toaster } from 'react-hot-toast';
 import { Routes, Route, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import Navbar from './components/Navbar';
@@ -13,6 +14,8 @@ import CreatePostPage from './pages/CreatePostPage';
 import EditPostPage from './pages/EditPostPage';
 import VerifyPending from './pages/VerifyPending';
 import VerifySuccess from './pages/VerifySuccess';
+import MedicalFlashcardsPage from './pages/MedicalFlashcardsPage';
+import MedicalQuestionsPage from './pages/MedicalQuestionsPage';
 import './index.css';
 
 // Simple protected route wrapper
@@ -73,6 +76,25 @@ function App() {
                   </Link>
                 </div>
               } />
+
+              <Route 
+                path="/medical-flashcards" 
+                element={
+                  <ErrorBoundary>
+                    <MedicalFlashcardsPage />
+                    <Toaster position="bottom-right" />
+                  </ErrorBoundary>
+                } 
+              />
+
+              <Route 
+                path="/medical-questions" 
+                element={
+                  <ErrorBoundary>
+                    <MedicalQuestionsPage />
+                  </ErrorBoundary>
+                } 
+              />
             </Routes>
           </main>
 

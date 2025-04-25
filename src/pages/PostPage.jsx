@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { supabase } from '../config/supabase';
 import { FaEdit, FaTrash, FaArrowLeft, FaStethoscope, FaHeart, FaBrain, FaHeadSideVirus, FaProcedures, FaBaby, FaSkull } from 'react-icons/fa';
+import DiscussionSection from '../components/DiscussionSection';
 
 const PostPage = () => {
   const { id } = useParams();
@@ -68,8 +69,27 @@ const PostPage = () => {
   };
 
   const getCategoryClass = (category) => {
-    if (!category) return 'badge-general';
-    return `badge-${category.toLowerCase()}`;
+    const categoryClasses = {
+      'Cardiology': 'badge-cardiology',
+      'Oncology': 'badge-oncology',
+      'Neurology': 'badge-neurology',
+      'Psychiatry': 'badge-psychiatry',
+      'Surgery': 'badge-surgery',
+      'Pediatrics': 'badge-pediatrics',
+      'Radiology': 'badge-radiology',
+      'General': 'badge-general'
+    };
+    return categoryClasses[category] || 'badge-general';
+  };
+
+  const getTypeClass = (postType) => {
+    const typeClasses = {
+      'Discussion': 'badge-general',
+      'Case Study': 'badge-accent',
+      'Research': 'badge-primary',
+      'Question': 'badge-warning'
+    };
+    return typeClasses[postType] || 'badge-general';
   };
 
   if (loading) return (
@@ -145,9 +165,7 @@ const PostPage = () => {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <span className={`badge ${post.post_type === 'Case Study' ? 'badge-oncology' : 
-                          post.post_type === 'Research' ? 'badge-surgery' : 
-                          'badge-general'}`}>
+          <span className={`badge ${getTypeClass(post.post_type)}`}>
             {post.post_type}
           </span>
           <span className={`badge ${getCategoryClass(post.post_category)}`}>
@@ -163,11 +181,11 @@ const PostPage = () => {
       </div>
 
       {post.image_url && (
-        <div className="mb-6 rounded-lg overflow-hidden">
+        <div className="post-image-container">
           <img 
             src={post.image_url} 
             alt="Post visual" 
-            className="w-full h-auto max-h-96 object-cover"
+            className="post-image"
           />
         </div>
       )}
@@ -185,6 +203,8 @@ const PostPage = () => {
           </div>
         </div>
       )}
+
+      <DiscussionSection postId={post.id} />
     </div>
   );
 };

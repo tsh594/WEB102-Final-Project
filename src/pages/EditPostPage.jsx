@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { supabase } from '../config/supabase';
 import PostForm from '../components/PostForm';
+import { FaArrowLeft, FaPlus } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
 
 const EditPostPage = () => {
   const { id } = useParams();
@@ -57,12 +59,30 @@ const EditPostPage = () => {
     }
   };
 
-  if (loading) return <div>Loading post...</div>;
-  if (error) return <div>Error: {error}</div>;
+  if (loading) return <div className="loading-container">Loading post...</div>;
+  if (error) return <div className="error-message">Error: {error}</div>;
 
   return (
-    <div className="page-container">
-      <h1>Edit Post</h1>
+    <div className="glass-panel post-page">
+      <div className="flex justify-between items-start mb-6">
+        <Link to="/" className="btn btn-outline">
+          <FaArrowLeft className="mr-2" />
+          Back to all posts
+        </Link>
+        
+        <div className="flex gap-2">
+          <Link
+            to="/posts/new"
+            className="btn btn-primary"
+          >
+            <FaPlus className="mr-2" />
+            Create New Post
+          </Link>
+        </div>
+      </div>
+
+      <h1 className="text-3xl font-bold mb-6">Edit Post</h1>
+      
       {post && (
         <PostForm 
           post={post}

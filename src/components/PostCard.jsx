@@ -23,6 +23,20 @@ const PostCard = ({ post, onDelete }) => {
     return `badge-${category.toLowerCase()}`;
   };
 
+    const getUrgencyBadge = (level) => {
+    const levels = [
+      { class: 'badge-urgency-0', label: 'Routine' },
+      { class: 'badge-urgency-1', label: 'Low' },
+      { class: 'badge-urgency-2', label: 'Moderate' },
+      { class: 'badge-urgency-3', label: 'High' },
+      { class: 'badge-urgency-4', label: 'Critical' },
+      { class: 'badge-urgency-5', label: 'Emergency' }
+    ];
+    return levels[level] || levels[0];
+  };
+
+  const urgency = getUrgencyBadge(post.urgency_level);
+
   return (
     <div className="glass-panel post-card">
       <div className="post-header">
@@ -36,6 +50,17 @@ const PostCard = ({ post, onDelete }) => {
               Peer Reviewed
             </span>
           )}
+
+          {post.image_url && (
+            <div className="media-preview mb-4">
+              <img 
+                src={post.image_url} 
+                alt="Post visual" 
+                className="post-image"
+              />
+            </div>
+          )}
+
           {user?.id === post.author_id && (
             <>
               <Link
@@ -79,6 +104,11 @@ const PostCard = ({ post, onDelete }) => {
           <span className={`badge ${getCategoryClass(post.post_category)}`}>
             {getCategoryIcon(post.post_category)}
             {post.post_category}
+          </span>
+
+          {/* Add urgency badge */}
+          <span className={`badge ${urgency.class}`}>
+            Urgency: {urgency.label}
           </span>
         </div>
 

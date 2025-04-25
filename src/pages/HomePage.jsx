@@ -1,8 +1,10 @@
+// HomePage.jsx
 import { useState, useEffect } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { supabase } from '../config/supabase';
 import { Link } from 'react-router-dom';
 import PostCard from '../components/PostCard';
+import { FaSortAmountDown, FaFilter, FaFileMedical } from 'react-icons/fa';
 
 const HomePage = () => {
   const { user } = useAuth();
@@ -102,42 +104,56 @@ const HomePage = () => {
         )}
       </div>
 
-      <div className="glass-panel p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="form-label">Sort By</label>
+      {/* Enhanced Filter Card */}
+      <div className="glass-panel p-6 mb-6 filter-card">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="filter-group">
+            <div className="flex items-center gap-3 mb-2">
+              <FaSortAmountDown className="text-primary-dark" />
+              <label className="form-label filter-label">Sort By</label>
+            </div>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="form-input"
+              className="filter-select"
             >
-              <option value="newest">Newest</option>
-              <option value="urgent">Most Urgent</option>
+              <option value="newest">Newest Posts</option>
+              <option value="urgent">Urgency Level</option>
               <option value="peer-reviewed">Peer Reviewed</option>
             </select>
           </div>
 
-          <div>
-            <label className="form-label">Category</label>
+          <div className="filter-group">
+            <div className="flex items-center gap-3 mb-2">
+              <FaFilter className="text-primary-dark" />
+              <label className="form-label filter-label">Category</label>
+            </div>
             <select
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
-              className="form-input"
+              className="filter-select"
             >
               {medicalCategories.map(category => (
-                <option key={category} value={category}>
+                <option 
+                  key={category} 
+                  value={category}
+                  className={`${category !== 'all' ? `category-${category.toLowerCase()}` : ''}`}
+                >
                   {category}
                 </option>
               ))}
             </select>
           </div>
 
-          <div>
-            <label className="form-label">Post Type</label>
+          <div className="filter-group">
+            <div className="flex items-center gap-3 mb-2">
+              <FaFileMedical className="text-primary-dark" />
+              <label className="form-label filter-label">Post Type</label>
+            </div>
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="form-input"
+              className="filter-select"
             >
               {postTypes.map(type => (
                 <option key={type} value={type}>
