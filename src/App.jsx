@@ -1,7 +1,8 @@
 import React from 'react';
 import { Toaster } from 'react-hot-toast';
-import { Routes, Route, Link } from 'react-router-dom';
+import { Routes, Route, Link, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthContext';
+import { PostsProvider } from './context/PostsContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -28,6 +29,7 @@ function App() {
   return (
     <React.StrictMode>
       <AuthProvider>
+        <PostsProvider>
         <div className="min-h-screen bg-gray-50">
           <Navbar />
           
@@ -37,7 +39,14 @@ function App() {
               <Route path="/" element={<HomePage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
-              <Route path="/posts/:id" element={<PostPage />} />
+              <Route 
+                path="/posts/:id" 
+                element={
+                  <ErrorBoundary>
+                    <PostPage />
+                  </ErrorBoundary>
+                } 
+              />
               <Route path="/verify-pending" element={<VerifyPending />} />
               <Route path="/verify-success" element={<VerifySuccess />} />
 
@@ -100,6 +109,7 @@ function App() {
 
           <Footer />
         </div>
+        </PostsProvider>
       </AuthProvider>
     </React.StrictMode>
   );

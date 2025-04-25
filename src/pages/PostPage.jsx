@@ -1,39 +1,53 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { usePosts } from '../context/PostsContext';
 import { supabase } from '../config/supabase';
-import { FaEdit, FaTrash, FaArrowLeft, FaStethoscope, FaHeart, FaBrain, FaHeadSideVirus, FaProcedures, FaBaby, FaSkull } from 'react-icons/fa';
+import {
+  FaEdit,
+  FaTrash,
+  FaArrowLeft,
+  FaStethoscope,
+  FaHeart,
+  FaBrain,
+  FaHeadSideVirus,
+  FaProcedures,
+  FaBaby,
+  FaSkull,
+  FaThumbsUp
+} from 'react-icons/fa';
 import DiscussionSection from '../components/DiscussionSection';
 
 const PostPage = () => {
   const { id } = useParams();
   const { user } = useAuth();
+  const { postsCache, updatePostVotes } = usePosts();
+  const navigate = useNavigate();
+
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const navigate = useNavigate();
-
-  const handleDelete = async () => {
-    if (window.confirm('Are you sure you want to delete this post?')) {
-      try {
-        await supabase
-          .from('posts')
-          .delete()
-          .eq('id', id);
-        
-        navigate('/');
-      } catch (error) {
-        console.error('Error deleting post:', error);
-        setError('Failed to delete post');
-      }
-    }
-  };
+  const [postVotes, setPostVotes] = useState(postsCache[id]?.votes || 0);
+  const [userVoted, setUserVoted] = useState(postsCache[id]?.userVoted || false);
+  const [isVoting, setIsVoting] = useState(false);
 
   useEffect(() => {
-    const fetchPost = async () => {
+    const abortController = new AbortController();
+
+    const fetchPostData = async () => {
       try {
         setLoading(true);
-        const { data, error } = await supabase
+        setError('');
+
+        // Set initial state from cache
+        const cachedVotes = postsCache[id];
+        if (cachedVotes) {
+          setPostVotes(cachedVotes.votes);
+          setUserVoted(cachedVotes.userVoted);
+        }
+
+        // Fetch post content
+        const { data, error: postError } = await supabase
           .from('posts')
           .select(`
             *,
@@ -42,59 +56,149 @@ const PostPage = () => {
           .eq('id', id)
           .single();
 
-        if (error) throw error;
+        if (abortController.signal.aborted) return;
+
+        if (postError) throw postError;
+        if (!data) throw new Error('Post not found');
         setPost(data);
-      } catch (error) {
-        console.error('Error fetching post:', error);
-        setError(error.message);
+
+        // Fetch votes if no cache exists
+        if (!cachedVotes) {
+          const { data: votesData, error: votesError } = await supabase
+            .from('post_votes')
+            .select('user_id')
+            .eq('post_id', id)
+            .eq('direction', 1);
+
+          if (votesError) throw votesError;
+
+          const upvotes = votesData.length;
+          const voted = user ? 
+            votesData.some(v => v.user_id === user.id) : 
+            false;
+
+          setPostVotes(upvotes);
+          setUserVoted(voted);
+          updatePostVotes(id, upvotes, voted);
+        }
+
+      } catch (err) {
+        if (!abortController.signal.aborted) {
+          console.error('Fetch error:', err);
+          setError(err.message || 'Failed to load post');
+        }
       } finally {
-        setLoading(false);
+        if (!abortController.signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
-    fetchPost();
-  }, [id]);
+    fetchPostData();
+    return () => abortController.abort();
+  }, [id, user, postsCache, updatePostVotes]);
 
-  const getCategoryIcon = (category) => {
-    const icons = {
-      'Cardiology': <FaHeart />,
-      'Oncology': <FaStethoscope />,
-      'Neurology': <FaBrain />,
-      'Psychiatry': <FaHeadSideVirus />,
-      'Surgery': <FaProcedures />,
-      'Pediatrics': <FaBaby />,
-      'Radiology': <FaSkull />,
-    };
-    return icons[category] || <FaStethoscope />;
+  const handleUpvote = async (e) => {
+    e.preventDefault();
+    if (!user) {
+      alert('Please login to vote!');
+      return navigate('/login');
+    }
+
+    setIsVoting(true);
+    try {
+      const newVotedState = !userVoted;
+      const newVotes = newVotedState ? postVotes + 1 : postVotes - 1;
+      
+      // Optimistic UI update
+      setPostVotes(newVotes);
+      setUserVoted(newVotedState);
+      updatePostVotes(id, newVotes, newVotedState);
+
+      // Server sync
+      if (newVotedState) {
+        const { error } = await supabase
+          .from('post_votes')
+          .upsert(
+            { 
+              post_id: id, 
+              user_id: user.id, 
+              direction: 1 
+            },
+            { 
+              onConflict: 'post_id,user_id',
+              returning: 'minimal'
+            }
+          );
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('post_votes')
+          .delete()
+          .match({ post_id: id, user_id: user.id });
+        if (error) throw error;
+      }
+
+    } catch (err) {
+      // Rollback on error
+      setPostVotes(prev => prev + (userVoted ? 1 : -1));
+      setUserVoted(prev => !prev);
+      updatePostVotes(id, postVotes, userVoted);
+      console.error('Vote error:', err);
+      setError(`Vote failed: ${err.message}`);
+    } finally {
+      setIsVoting(false);
+    }
   };
 
-  const getCategoryClass = (category) => {
-    const categoryClasses = {
-      'Cardiology': 'badge-cardiology',
-      'Oncology': 'badge-oncology',
-      'Neurology': 'badge-neurology',
-      'Psychiatry': 'badge-psychiatry',
-      'Surgery': 'badge-surgery',
-      'Pediatrics': 'badge-pediatrics',
-      'Radiology': 'badge-radiology',
-      'General': 'badge-general'
-    };
-    return categoryClasses[category] || 'badge-general';
+  const handleDelete = async () => {
+    if (!window.confirm('Are you sure you want to delete this post?')) return;
+    
+    try {
+      await supabase
+        .from('posts')
+        .delete()
+        .eq('id', id);
+
+      navigate('/');
+    } catch (err) {
+      console.error('Delete error:', err);
+      setError('Failed to delete post');
+    }
   };
 
-  const getTypeClass = (postType) => {
-    const typeClasses = {
-      'Discussion': 'badge-general',
-      'Case Study': 'badge-accent',
-      'Research': 'badge-primary',
-      'Question': 'badge-warning'
+  useEffect(() => {
+    if (!post) return;
+    
+    const wrapImg = img => {
+      if (img.parentElement.classList.contains('zoom-container')) return;
+      const wrapper = document.createElement('div');
+      wrapper.className = 'zoom-container';
+      img.replaceWith(wrapper);
+      wrapper.appendChild(img);
+      img.classList.add('zoomable-image');
     };
-    return typeClasses[postType] || 'badge-general';
-  };
+
+    document.querySelectorAll('.featured-zoomable').forEach(wrapImg);
+    document.querySelectorAll('.post-content img').forEach(wrapImg);
+  }, [post]);
+
+  const getCategoryIcon = cat => ({
+    Cardiology: <FaHeart />,
+    Oncology:   <FaStethoscope />,
+    Neurology:  <FaBrain />,
+    Psychiatry: <FaHeadSideVirus />,
+    Surgery:    <FaProcedures />,
+    Pediatrics: <FaBaby />,
+    Radiology:  <FaSkull />
+  }[cat] || <FaStethoscope />);
+
+  const getBadgeClass = c =>
+    c ? `badge-${c.toLowerCase()}` : 'badge-general';
 
   if (loading) return (
     <div className="loading-container">
-      <div className="loading-spinner"></div>
+      <div className="loading-spinner" />
       <p className="mt-4">Loading post...</p>
     </div>
   );
@@ -103,8 +207,7 @@ const PostPage = () => {
     <div className="glass-panel p-8 text-center">
       <p className="text-danger mb-4">{error}</p>
       <Link to="/" className="btn btn-primary">
-        <FaArrowLeft className="mr-2" />
-        Back to homepage
+        <FaArrowLeft className="mr-2" /> Back
       </Link>
     </div>
   );
@@ -113,8 +216,7 @@ const PostPage = () => {
     <div className="glass-panel p-8 text-center">
       <p>Post not found</p>
       <Link to="/" className="btn btn-primary mt-4">
-        <FaArrowLeft className="mr-2" />
-        Back to homepage
+        <FaArrowLeft className="mr-2" /> Back
       </Link>
     </div>
   );
@@ -123,25 +225,15 @@ const PostPage = () => {
     <div className="glass-panel post-page">
       <div className="flex justify-between items-start mb-6">
         <Link to="/" className="btn btn-outline">
-          <FaArrowLeft className="mr-2" />
-          Back to all posts
+          <FaArrowLeft className="mr-2" /> All Posts
         </Link>
-        
         {user?.id === post.author_id && (
           <div className="flex gap-2">
-            <Link
-              to={`/posts/${post.id}/edit`}
-              className="btn btn-primary"
-            >
-              <FaEdit className="mr-2" />
-              Edit Post
+            <Link to={`/posts/${post.id}/edit`} className="btn btn-primary">
+              <FaEdit className="mr-2" /> Edit Post
             </Link>
-            <button
-              onClick={handleDelete}
-              className="btn btn-danger"
-            >
-              <FaTrash className="mr-2" />
-              Delete Post
+            <button onClick={handleDelete} className="btn btn-danger">
+              <FaTrash className="mr-2" /> Delete Post
             </button>
           </div>
         )}
@@ -150,61 +242,47 @@ const PostPage = () => {
       <h1 className="text-3xl font-bold mb-4">{post.title}</h1>
 
       <div className="post-meta flex flex-wrap gap-4 items-center mb-6">
-        <div className="flex items-center gap-4">
+        <span className="post-meta-item">{post.author?.name || 'Anonymous'}</span>
+        <span className="post-meta-item">
+          Posted {new Date(post.created_at).toLocaleDateString()}
+        </span>
+        {post.updated_at && (
           <span className="post-meta-item">
-            {post.author?.name || 'Anonymous'}
+            Updated {new Date(post.updated_at).toLocaleDateString()}
           </span>
-          <span className="post-meta-item">
-            Posted on {new Date(post.created_at).toLocaleDateString()}
-          </span>
-          {post.updated_at && (
-            <span className="post-meta-item">
-              Updated on {new Date(post.updated_at).toLocaleDateString()}
-            </span>
-          )}
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <span className={`badge ${getTypeClass(post.post_type)}`}>
-            {post.post_type}
-          </span>
-          <span className={`badge ${getCategoryClass(post.post_category)}`}>
-            {getCategoryIcon(post.post_category)}
-            {post.post_category}
-          </span>
-          {post.is_peer_reviewed && (
-            <span className="badge badge-peer-reviewed">
-              Peer Reviewed
-            </span>
-          )}
-        </div>
+        )}
+        <span className={`badge ${getBadgeClass(post.post_category)}`}>
+          {getCategoryIcon(post.post_category)} {post.post_category}
+        </span>
       </div>
 
       {post.image_url && (
-        <div className="post-image-container">
-          <img 
-            src={post.image_url} 
-            alt="Post visual" 
-            className="post-image"
-          />
-        </div>
+        <img
+          src={post.image_url}
+          alt="Post visual"
+          className="zoomable-image featured-zoomable mb-6"
+        />
       )}
 
-      <div 
-        className="prose max-w-none mb-6"
+      <div
+        className="post-content prose max-w-none mb-6"
         dangerouslySetInnerHTML={{ __html: post.content }}
       />
 
-      {post.medical_references && (
-        <div className="references-box bg-blue-50 rounded-lg p-6 mb-6">
-          <h3 className="text-xl font-semibold mb-4">Medical References</h3>
-          <div className="whitespace-pre-line">
-            {post.medical_references}
-          </div>
-        </div>
-      )}
+      <div className="vote-section mb-6">
+        <button
+          type="button"
+          onClick={handleUpvote}
+          className={`vote-btn ${userVoted ? 'btn-up' : 'btn-secondary-a'}`}
+          disabled={!user || isVoting}
+          aria-label="Upvote"
+        >
+          <FaThumbsUp />
+        </button>
+        <span className="vote-count">{postVotes}</span>
+      </div>
 
-      <DiscussionSection postId={post.id} />
+      <DiscussionSection postId={post.id} currentUser={user} />
     </div>
   );
 };

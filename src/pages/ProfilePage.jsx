@@ -21,6 +21,7 @@ const ProfilePage = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const fontDebounce = useRef(null);
 
+  // Update the fetchProfile useEffect to handle null name:
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -29,18 +30,17 @@ const ProfilePage = () => {
           .select('*')
           .eq('id', user.id)
           .single();
+
         if (error) throw error;
 
-        setProfile(data);
-        if (data.font_settings) {
-          setFontSettings({
-            family: data.font_settings.family || 'Inter',
-            size: data.font_settings.size || 16,
-            color: data.font_settings.color || '#1e293b',
-            weight: data.font_settings.weight || 400,
-            style: data.font_settings.style || 'normal'
-          });
-        }
+        // Handle potential null values
+        setProfile({
+          name: data.name || '',
+          avatar_url: data.avatar_url || '',
+          font_settings: data.font_settings || {}
+        });
+        
+        // Rest of the font settings logic...
       } catch (err) {
         setError('Failed to load profile: ' + err.message);
       } finally {
@@ -98,13 +98,23 @@ const ProfilePage = () => {
     }, 1500);
   };
 
-  const handleSaveName = async () => {
-    if (!profile.name.trim()) {
-      setError('Display name cannot be empty');
-      return;
-    }
-    await updateProfile({ name: profile.name.trim() });
-  };
+// In the handleSaveName function, add null check:
+const handleSaveName = async () => {
+  if (!profile.name?.trim()) { // Add optional chaining
+    setError('Display name cannot be empty');
+    return;
+  }
+  await updateProfile({ name: profile.name.trim() });
+};
+
+// In the input field, add fallback for null:
+<input
+  type="text"
+  value={profile.name || ''} // Handle null case
+  onChange={(e) => setProfile((p) => ({ ...p, name: e.target.value }))}
+  className="form-control"
+  placeholder="Enter your display name"
+/>
 
   if (loading) {
     return (

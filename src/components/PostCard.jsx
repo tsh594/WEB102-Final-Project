@@ -1,29 +1,22 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
-import { FaEdit, FaTrash, FaEye, FaStethoscope, FaHeart, FaBrain, FaHeadSideVirus, FaProcedures, FaBaby, FaSkull } from 'react-icons/fa';
+import {
+  FaEdit, FaTrash, FaEye, FaStethoscope,
+  FaHeart, FaBrain, FaHeadSideVirus,
+  FaProcedures, FaBaby, FaSkull, FaThumbsUp
+} from 'react-icons/fa';
+import '../index.css';
 
 const PostCard = ({ post, onDelete }) => {
   const { user } = useAuth();
 
-  const getCategoryIcon = (category) => {
-    const icons = {
-      'Cardiology': <FaHeart className="mr-1" />,
-      'Oncology': <FaStethoscope className="mr-1" />,
-      'Neurology': <FaBrain className="mr-1" />,
-      'Psychiatry': <FaHeadSideVirus className="mr-1" />,
-      'Surgery': <FaProcedures className="mr-1" />,
-      'Pediatrics': <FaBaby className="mr-1" />,
-      'Radiology': <FaSkull className="mr-1" />,
-    };
-    return icons[category] || <FaStethoscope className="mr-1" />;
-  };
+  if (!post) return null;
 
-  const getCategoryClass = (category) => {
-    if (!category) return 'badge-general'; // Add null check
-    return `badge-${category.toLowerCase()}`;
-  };
-
-    const getUrgencyBadge = (level) => {
+  // Fixed urgency calculation function
+  const getUrgencyBadge = (level) => {
+    const numericLevel = Number(level) || 0;
+    const clampedLevel = Math.max(0, Math.min(numericLevel, 5));
+    
     const levels = [
       { class: 'badge-urgency-0', label: 'Routine' },
       { class: 'badge-urgency-1', label: 'Low' },
@@ -32,53 +25,74 @@ const PostCard = ({ post, onDelete }) => {
       { class: 'badge-urgency-4', label: 'Critical' },
       { class: 'badge-urgency-5', label: 'Emergency' }
     ];
-    return levels[level] || levels[0];
+    
+    return levels[clampedLevel] || levels[0];
   };
 
-  const urgency = getUrgencyBadge(post.urgency_level);
+  // Rest of the component remains the same
+  const getCategoryIcon = (category) => {
+    const icons = {
+      'Cardiology': <FaHeart className="category-icon" />,
+      'Oncology': <FaStethoscope className="category-icon" />,
+      'Neurology': <FaBrain className="category-icon" />,
+      'Psychiatry': <FaHeadSideVirus className="category-icon" />,
+      'Surgery': <FaProcedures className="category-icon" />,
+      'Pediatrics': <FaBaby className="category-icon" />,
+      'Radiology': <FaSkull className="category-icon" />,
+    };
+    return icons[category] || <FaStethoscope className="category-icon" />;
+  };
+
+  const getCategoryClass = (category) => {
+    if (!category) return 'badge-general';
+    return `badge-${category.toLowerCase().replace(' ', '-')}`;
+  };
+
+  const urgency = getUrgencyBadge(post?.urgency_level);
 
   return (
     <div className="glass-panel post-card">
       <div className="post-header">
-        <Link to={`/posts/${post.id}`} className="post-title">
-          {post.title}
+        <Link to={`/posts/${post?.id}`} className="post-title">
+          {post?.title || 'Untitled Post'}
         </Link>
         
         <div className="post-actions">
-          {post.is_peer_reviewed && (
+          {post?.is_peer_reviewed && (
             <span className="badge badge-peer-reviewed">
               Peer Reviewed
             </span>
           )}
 
-          {post.image_url && (
-            <div className="media-preview mb-4">
+          {post?.image_url && (
+            <div className="media-preview">
               <img 
                 src={post.image_url} 
                 alt="Post visual" 
                 className="post-image"
+                onError={(e) => e.target.style.display = 'none'}
               />
             </div>
           )}
 
-          {user?.id === post.author_id && (
+          {user?.id === post?.author_id && (
             <>
               <Link
-                to={`/posts/${post.id}/edit`}
-                className="btn btn-outline btn-sm"
+                to={`/posts/${post?.id}/edit`}
+                className="btn btn-edit"
               >
-                <FaEdit className="mr-1" />
-                Edit
+                <FaEdit />
+                <span>Edit</span>
               </Link>
               <button
                 onClick={(e) => {
                   e.preventDefault();
-                  onDelete(post.id);
+                  onDelete(post?.id);
                 }}
-                className="btn btn-danger btn-sm"
+                className="btn btn-delete"
               >
-                <FaTrash className="mr-1" />
-                Delete
+                <FaTrash />
+                <span>Delete</span>
               </button>
             </>
           )}
@@ -93,39 +107,47 @@ const PostCard = ({ post, onDelete }) => {
       </div>
 
       <div className="post-content">
-        <div className="flex flex-wrap items-center gap-2 mb-4 text-sm">
+        <div className="post-meta-container">
           <span className="post-meta-item">
-            {post.author?.name || 'Anonymous'}
+            {post?.author?.name || 'Anonymous'}
           </span>
           <span className="post-meta-item">
-            {new Date(post.created_at).toLocaleDateString()}
+            {post?.created_at ? new Date(post.created_at).toLocaleDateString() : 'No date'}
           </span>
-          {/* Changed post.category to post.post_category */}
-          <span className={`badge ${getCategoryClass(post.post_category)}`}>
-            {getCategoryIcon(post.post_category)}
-            {post.post_category}
+          <span className={`badge ${getCategoryClass(post?.post_category)}`}>
+            {getCategoryIcon(post?.post_category)}
+            {post?.post_category || 'General'}
           </span>
 
-          {/* Add urgency badge */}
-          <span className={`badge ${urgency.class}`}>
-            Urgency: {urgency.label}
+          {/* Safely rendered urgency badge */}
+          {urgency && (
+            <span className={`badge ${urgency.class}`}>
+              Urgency: {urgency.label}
+            </span>
+          )}
+
+          <span className="post-meta-item vote-count">
+            <FaThumbsUp />
+            <span>{post?.votes ?? 0}</span>
           </span>
         </div>
 
-        <div className="mb-4 line-clamp-3">
-          {/* Added optional chaining for raw_content */}
-          {post.raw_content?.substring(0, 200)}{post.raw_content?.length > 200 ? '...' : ''}
+        <div className="post-excerpt">
+          {post?.raw_content?.substring(0, 200) || 'No content available'}
+          {(post?.raw_content?.length || 0) > 200 ? '...' : ''}
         </div>
 
-        <div className="flex justify-between items-center">
-          <span className={`badge ${post.post_type === 'Case Study' ? 'badge-oncology' : 
-                           post.post_type === 'Research' ? 'badge-surgery' : 
-                           'badge-general'}`}>
-            {post.post_type}
+        <div className="post-footer">
+          <span className={`badge ${
+            post?.post_type === 'Case Study' ? 'badge-case-study' : 
+            post?.post_type === 'Research' ? 'badge-research' : 
+            'badge-general'
+          }`}>
+            {post?.post_type || 'Post'}
           </span>
           <Link 
-            to={`/posts/${post.id}`} 
-            className="text-sm font-medium text-primary hover:underline"
+            to={`/posts/${post?.id}`} 
+            className="read-more-link"
           >
             Read full post →
           </Link>

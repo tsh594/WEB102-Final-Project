@@ -1,88 +1,68 @@
 import { useState } from 'react';
-import { useAuth } from '../auth/AuthContext';
 import { supabase } from '../config/supabase';
 
-const VoteButtons = ({ discussionId, initialUpvotes }) => {
-  const { user } = useAuth();
-  const [upvotes, setUpvotes] = useState(initialUpvotes);
-  const [userVote, setUserVote] = useState(null);
+const VoteButton = ({ commentId, user }) => {
+  const [loading, setLoading] = useState(false);
+  const [direction, setDirection] = useState(null); // 'upvote' or 'downvote'
+  const [hasVoted, setHasVoted] = useState(false);
 
-  const handleVote = async (direction) => {
-    if (!user) return;
+  const handleVote = async (newDirection) => {
+    if (loading) return;
+    setLoading(true);
 
     try {
-      // Check if user already voted
-      const { data: existingVote } = await supabase
-        .from('votes')
-        .select()
-        .eq('discussion_id', discussionId)
-        .eq('user_id', user.id)
-        .single();
+      // If the user is removing their upvote, we pass 'null' as the direction
+      if (newDirection === null) {
+        const { data, error } = await supabase.rpc('toggle_comment_vote', {
+          user_uuid: user.id,
+          comment_uuid: commentId,
+          direction: 'remove_upvote'
+        });
+        if (error) throw error;
 
-      if (existingVote) {
-        // User already voted - update or remove vote
-        if (existingVote.direction === direction) {
-          // Remove vote
-          await supabase
-            .from('votes')
-            .delete()
-            .eq('id', existingVote.id);
-
-          setUpvotes(prev => prev + (direction === 'up' ? -1 : 1));
-          setUserVote(null);
-        } else {
-          // Change vote direction
-          await supabase
-            .from('votes')
-            .update({ direction })
-            .eq('id', existingVote.id);
-
-          setUpvotes(prev => prev + (direction === 'up' ? 2 : -2));
-          setUserVote(direction);
-        }
+        setDirection(null); // Remove vote
       } else {
-        // New vote
-        await supabase
-          .from('votes')
-          .insert({
-            discussion_id: discussionId,
-            user_id: user.id,
-            direction,
-          });
+        // Handle upvoting or downvoting
+        const { data, error } = await supabase.rpc('toggle_comment_vote', {
+          user_uuid: user.id,
+          comment_uuid: commentId,
+          direction: newDirection
+        });
+        if (error) throw error;
 
-        setUpvotes(prev => prev + (direction === 'up' ? 1 : -1));
-        setUserVote(direction);
+        setDirection(newDirection); // Set the new direction
       }
 
-      // Update discussion upvotes count
-      await supabase
-        .from('discussions')
-        .update({ upvotes })
-        .eq('id', discussionId);
+      setHasVoted(true);
     } catch (err) {
-      console.error('Error voting:', err);
+      console.error('Error voting on comment:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col items-center ml-4">
+    <div>
       <button
-        onClick={() => handleVote('up')}
-        disabled={!user}
-        className={`p-2 rounded-t-full ${userVote === 'up' ? 'text-blue-600' : 'text-gray-400'} ${user ? 'hover:bg-gray-100' : ''}`}
+        onClick={() => handleVote('upvote')}
+        disabled={loading || direction === 'upvote'}
       >
-        ▲
+        Upvote
       </button>
-      <span className="my-1 font-medium">{upvotes}</span>
       <button
-        onClick={() => handleVote('down')}
-        disabled={!user}
-        className={`p-2 rounded-b-full ${userVote === 'down' ? 'text-red-600' : 'text-gray-400'} ${user ? 'hover:bg-gray-100' : ''}`}
+        onClick={() => handleVote('downvote')}
+        disabled={loading || direction === 'downvote'}
       >
-        ▼
+        Downvote
+      </button>
+      <button
+        onClick={() => handleVote(null)} // This is for removing the upvote
+        disabled={loading || direction !== 'upvote'}
+      >
+        Remove Upvote
       </button>
     </div>
   );
 };
 
-export default VoteButtons;
+export default VoteButton;
