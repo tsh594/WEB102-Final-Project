@@ -3,18 +3,12 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { usePosts } from '../context/PostsContext';
 import { supabase } from '../config/supabase';
+import DOMPurify from 'dompurify';
 import {
-  FaEdit,
-  FaTrash,
-  FaArrowLeft,
-  FaStethoscope,
-  FaHeart,
-  FaBrain,
-  FaHeadSideVirus,
-  FaProcedures,
-  FaBaby,
-  FaSkull,
-  FaThumbsUp
+  FaEdit, FaTrash, FaArrowLeft, FaStethoscope,
+  FaHeart, FaBrain, FaHeadSideVirus, FaProcedures,
+  FaBaby, FaSkull, FaThumbsUp, FaFilePdf,
+  FaFileWord, FaFileExcel, FaFilePowerpoint, FaFileArchive, FaFile
 } from 'react-icons/fa';
 import DiscussionSection from '../components/DiscussionSection';
 
@@ -30,6 +24,7 @@ const PostPage = () => {
   const [postVotes, setPostVotes] = useState(postsCache[id]?.votes || 0);
   const [userVoted, setUserVoted] = useState(postsCache[id]?.userVoted || false);
   const [isVoting, setIsVoting] = useState(false);
+  const [attachments, setAttachments] = useState([]);
 
   useEffect(() => {
     const abortController = new AbortController();
@@ -39,44 +34,39 @@ const PostPage = () => {
         setLoading(true);
         setError('');
 
-        // Set initial state from cache
-        const cachedVotes = postsCache[id];
-        if (cachedVotes) {
-          setPostVotes(cachedVotes.votes);
-          setUserVoted(cachedVotes.userVoted);
-        }
-
-        // Fetch post content
         const { data, error: postError } = await supabase
           .from('posts')
           .select(`
             *,
-            author:profiles!fk_author(name)
+            author:profiles!fk_author(name),
+            attachments
           `)
           .eq('id', id)
           .single();
 
         if (abortController.signal.aborted) return;
-
         if (postError) throw postError;
         if (!data) throw new Error('Post not found');
-        setPost(data);
 
-        // Fetch votes if no cache exists
-        if (!cachedVotes) {
-          const { data: votesData, error: votesError } = await supabase
+        // Process attachments
+        const validAttachments = (data.attachments || []).filter(
+          a => a?.url && ['image', 'video', 'file'].includes(a?.type)
+        );
+
+        setPost(data);
+        setAttachments(validAttachments);
+
+        // Fetch votes if not cached
+        if (!postsCache[id]) {
+          const { data: votesData } = await supabase
             .from('post_votes')
             .select('user_id')
             .eq('post_id', id)
             .eq('direction', 1);
 
-          if (votesError) throw votesError;
-
-          const upvotes = votesData.length;
-          const voted = user ? 
-            votesData.some(v => v.user_id === user.id) : 
-            false;
-
+          const upvotes = votesData?.length || 0;
+          const voted = user ? votesData?.some(v => v.user_id === user.id) : false;
+          
           setPostVotes(upvotes);
           setUserVoted(voted);
           updatePostVotes(id, upvotes, voted);
@@ -84,7 +74,6 @@ const PostPage = () => {
 
       } catch (err) {
         if (!abortController.signal.aborted) {
-          console.error('Fetch error:', err);
           setError(err.message || 'Failed to load post');
         }
       } finally {
@@ -100,43 +89,28 @@ const PostPage = () => {
 
   const handleUpvote = async (e) => {
     e.preventDefault();
-    if (!user) {
-      alert('Please login to vote!');
-      return navigate('/login');
-    }
+    if (!user) return navigate('/login');
 
     setIsVoting(true);
     try {
       const newVotedState = !userVoted;
       const newVotes = newVotedState ? postVotes + 1 : postVotes - 1;
       
-      // Optimistic UI update
+      // Optimistic update
       setPostVotes(newVotes);
       setUserVoted(newVotedState);
       updatePostVotes(id, newVotes, newVotedState);
 
-      // Server sync
+      // Sync with server
       if (newVotedState) {
-        const { error } = await supabase
+        await supabase
           .from('post_votes')
-          .upsert(
-            { 
-              post_id: id, 
-              user_id: user.id, 
-              direction: 1 
-            },
-            { 
-              onConflict: 'post_id,user_id',
-              returning: 'minimal'
-            }
-          );
-        if (error) throw error;
+          .upsert({ post_id: id, user_id: user.id, direction: 1 });
       } else {
-        const { error } = await supabase
+        await supabase
           .from('post_votes')
           .delete()
           .match({ post_id: id, user_id: user.id });
-        if (error) throw error;
       }
 
     } catch (err) {
@@ -144,8 +118,7 @@ const PostPage = () => {
       setPostVotes(prev => prev + (userVoted ? 1 : -1));
       setUserVoted(prev => !prev);
       updatePostVotes(id, postVotes, userVoted);
-      console.error('Vote error:', err);
-      setError(`Vote failed: ${err.message}`);
+      setError('Vote failed: ' + err.message);
     } finally {
       setIsVoting(false);
     }
@@ -162,124 +135,187 @@ const PostPage = () => {
 
       navigate('/');
     } catch (err) {
-      console.error('Delete error:', err);
-      setError('Failed to delete post');
+      setError('Failed to delete post: ' + err.message);
     }
   };
 
   useEffect(() => {
     if (!post) return;
-    
-    const wrapImg = img => {
-      if (img.parentElement.classList.contains('zoom-container')) return;
-      const wrapper = document.createElement('div');
-      wrapper.className = 'zoom-container';
-      img.replaceWith(wrapper);
-      wrapper.appendChild(img);
-      img.classList.add('zoomable-image');
+
+    const handleMedia = () => {
+      // Add zoom functionality
+      document.querySelectorAll('.post-content img').forEach(img => {
+        if (!img.closest('.zoom-container')) {
+          const wrapper = document.createElement('div');
+          wrapper.className = 'zoom-container';
+          img.replaceWith(wrapper);
+          wrapper.appendChild(img);
+          img.classList.add('zoomable-image');
+        }
+      });
+
+      // Handle media errors
+      document.querySelectorAll('.post-content img, .post-content video').forEach(el => {
+        el.addEventListener('error', () => {
+          el.style.display = 'none';
+          el.parentElement?.remove();
+        });
+      });
     };
 
-    document.querySelectorAll('.featured-zoomable').forEach(wrapImg);
-    document.querySelectorAll('.post-content img').forEach(wrapImg);
+    const observer = new MutationObserver(handleMedia);
+    const contentEl = document.querySelector('.post-content');
+    if (contentEl) {
+      observer.observe(contentEl, { childList: true, subtree: true });
+      handleMedia();
+    }
+
+    return () => observer.disconnect();
   }, [post]);
 
-  const getCategoryIcon = cat => ({
-    Cardiology: <FaHeart />,
-    Oncology:   <FaStethoscope />,
-    Neurology:  <FaBrain />,
-    Psychiatry: <FaHeadSideVirus />,
-    Surgery:    <FaProcedures />,
-    Pediatrics: <FaBaby />,
-    Radiology:  <FaSkull />
-  }[cat] || <FaStethoscope />);
+  const getFileIcon = (url) => {
+    if (!url) return <FaFile className="file-icon generic" />;
+    
+    const ext = url.split('.').pop()?.toLowerCase() || 'generic';
+    const icons = {
+      pdf: <FaFilePdf className="file-icon pdf" />,
+      doc: <FaFileWord className="file-icon doc" />,
+      docx: <FaFileWord className="file-icon doc" />,
+      xls: <FaFileExcel className="file-icon xls" />,
+      xlsx: <FaFileExcel className="file-icon xls" />,
+      ppt: <FaFilePowerpoint className="file-icon ppt" />,
+      pptx: <FaFilePowerpoint className="file-icon ppt" />,
+      zip: <FaFileArchive className="file-icon zip" />,
+      jpg: <FaFile className="file-icon image" />,
+      png: <FaFile className="file-icon image" />,
+      mp4: <FaFile className="file-icon video" />,
+      generic: <FaFile className="file-icon generic" />
+    };
+    
+    return icons[ext] || icons.generic;
+  };
 
-  const getBadgeClass = c =>
-    c ? `badge-${c.toLowerCase()}` : 'badge-general';
+  const getCategoryIcon = (cat) => ({
+    Cardiology: <FaHeart />,
+    Oncology: <FaStethoscope />,
+    Neurology: <FaBrain />,
+    Psychiatry: <FaHeadSideVirus />,
+    Surgery: <FaProcedures />,
+    Pediatrics: <FaBaby />,
+    Radiology: <FaSkull />
+  }[cat] || <FaStethoscope />);
 
   if (loading) return (
     <div className="loading-container">
       <div className="loading-spinner" />
-      <p className="mt-4">Loading post...</p>
+      <p className="loading-text">Loading post...</p>
     </div>
   );
 
   if (error) return (
-    <div className="glass-panel p-8 text-center">
-      <p className="text-danger mb-4">{error}</p>
-      <Link to="/" className="btn btn-primary">
-        <FaArrowLeft className="mr-2" /> Back
+    <div className="error-container">
+      <p className="error-message">{error}</p>
+      <Link to="/" className="back-button">
+        <FaArrowLeft className="icon-spacing" /> Back to Home
       </Link>
     </div>
   );
 
   if (!post) return (
-    <div className="glass-panel p-8 text-center">
-      <p>Post not found</p>
-      <Link to="/" className="btn btn-primary mt-4">
-        <FaArrowLeft className="mr-2" /> Back
+    <div className="not-found-container">
+      <p className="not-found-message">Post not found</p>
+      <Link to="/" className="back-button">
+        <FaArrowLeft className="icon-spacing" /> Back to Home
       </Link>
     </div>
   );
 
   return (
-    <div className="glass-panel post-page">
-      <div className="flex justify-between items-start mb-6">
-        <Link to="/" className="btn btn-outline">
-          <FaArrowLeft className="mr-2" /> All Posts
+    <div className="glass-panel post-page-container">
+      <div className="post-header">
+        <Link to="/" className="btn btn-outline-a">
+          <FaArrowLeft className="icon-spacing" /> All Posts
         </Link>
         {user?.id === post.author_id && (
-          <div className="flex gap-2">
-            <Link to={`/posts/${post.id}/edit`} className="btn btn-primary">
-              <FaEdit className="mr-2" /> Edit Post
+          <div className="author-controls">
+            <Link to={`/posts/${post.id}/edit`} className="btn btn-outline-a">
+              <FaEdit className="icon-spacing" /> Edit Post
             </Link>
-            <button onClick={handleDelete} className="btn btn-danger">
-              <FaTrash className="mr-2" /> Delete Post
+            <button onClick={handleDelete} className="btn btn-outline-danger">
+              <FaTrash className="icon-spacing" /> Delete Post
             </button>
           </div>
         )}
       </div>
 
-      <h1 className="text-3xl font-bold mb-4">{post.title}</h1>
+      <h1 className="post-title">{post.title}</h1>
 
-      <div className="post-meta flex flex-wrap gap-4 items-center mb-6">
-        <span className="post-meta-item">{post.author?.name || 'Anonymous'}</span>
-        <span className="post-meta-item">
+      <div className="post-meta">
+        <span className="meta-item author">{post.author?.name || 'Anonymous'}</span>
+        <span className="meta-item date">
           Posted {new Date(post.created_at).toLocaleDateString()}
         </span>
         {post.updated_at && (
-          <span className="post-meta-item">
+          <span className="meta-item date">
             Updated {new Date(post.updated_at).toLocaleDateString()}
           </span>
         )}
-        <span className={`badge ${getBadgeClass(post.post_category)}`}>
+        <span className={`category-badge ${post.post_category?.toLowerCase()}`}>
           {getCategoryIcon(post.post_category)} {post.post_category}
         </span>
       </div>
 
-      {post.image_url && (
-        <img
-          src={post.image_url}
-          alt="Post visual"
-          className="zoomable-image featured-zoomable mb-6"
-        />
+      {attachments.length > 0 && (
+        <div className="attachments-grid">
+          {attachments.map((attachment, index) => (
+            <div key={index} className="attachment-item">
+              {attachment.type === 'image' ? (
+                <img 
+                  src={attachment.url} 
+                  alt={attachment.name || 'Post attachment'} 
+                  className="zoomable-image"
+                  loading="lazy"
+                />
+              ) : attachment.type === 'video' ? (
+                <video controls className="media-attachment">
+                  <source src={attachment.url} type="video/mp4" />
+                </video>
+              ) : (
+                <a 
+                  href={attachment.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="file-attachment"
+                >
+                  {getFileIcon(attachment.url)}
+                  <span>{attachment.name || 'Download File'}</span>
+                </a>
+              )}
+            </div>
+          ))}
+        </div>
       )}
 
       <div
-        className="post-content prose max-w-none mb-6"
-        dangerouslySetInnerHTML={{ __html: post.content }}
+        className="post-content"
+        dangerouslySetInnerHTML={{ 
+          __html: DOMPurify.sanitize(post.content, {
+            ADD_TAGS: ['video'],
+            ADD_ATTR: ['controls', 'src', 'alt', 'preload']
+          })
+        }}
       />
 
-      <div className="vote-section mb-6">
+      <div className="vote-section">
         <button
           type="button"
           onClick={handleUpvote}
-          className={`vote-btn ${userVoted ? 'btn-up' : 'btn-secondary-a'}`}
+          className={`vote-button ${userVoted ? 'voted' : ''}`}
           disabled={!user || isVoting}
-          aria-label="Upvote"
         >
-          <FaThumbsUp />
+          <FaThumbsUp className="icon-spacing" />
+          <span className="vote-count">{postVotes}</span>
         </button>
-        <span className="vote-count">{postVotes}</span>
       </div>
 
       <DiscussionSection postId={post.id} currentUser={user} />

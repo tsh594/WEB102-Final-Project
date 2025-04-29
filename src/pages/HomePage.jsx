@@ -1,10 +1,37 @@
-// src/pages/HomePage.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { supabase } from '../config/supabase';
 import { Link } from 'react-router-dom';
 import PostCard from '../components/PostCard';
-import { FaSortAmountDown, FaFilter, FaFileMedical, FaHeart, FaSearch } from 'react-icons/fa';
+import { FaSortAmountDown, FaFilter, FaFileMedical, FaSearch } from 'react-icons/fa';
+import '../index.css';
+
+const medicalSpecialties = [
+  { name: 'General Medicine', color: '#4CAF50', icon: '🩺' },
+  { name: 'Radiology', color: '#9C27B0', icon: '📷' },
+  { name: 'Cardiology', color: '#F44336', icon: '❤️' },
+  { name: 'Neurology', color: '#3F51B5', icon: '🧠' },
+  { name: 'Oncology', color: '#FF5722', icon: '🦠' },
+  { name: 'Pediatrics', color: '#FFC107', icon: '👶' },
+  { name: 'Orthopedics', color: '#795548', icon: '🦴' },
+  { name: 'Dermatology', color: '#FF9800', icon: '👩⚕️' },
+  { name: 'Gastroenterology', color: '#8BC34A', icon: '🍏' },
+  { name: 'Endocrinology', color: '#E91E63', icon: '⚖️' },
+  { name: 'Pulmonology', color: '#00BCD4', icon: '🌬️' },
+  { name: 'Nephrology', color: '#673AB7', icon: '💧' },
+  { name: 'Hematology', color: '#F44336', icon: '🩸' },
+  { name: 'Rheumatology', color: '#FF7043', icon: '🦵' },
+  { name: 'Infectious Diseases', color: '#CDDC39', icon: '🦠' },
+  { name: 'Emergency Medicine', color: '#F44336', icon: '🚑' },
+  { name: 'Family Medicine', color: '#4CAF50', icon: '👪' },
+  { name: 'Psychiatry', color: '#9C27B0', icon: '🧠' },
+  { name: 'Obstetrics/Gynecology', color: '#E91E63', icon: '🤰' },
+  { name: 'Urology', color: '#3F51B5', icon: '🚹' },
+  { name: 'Ophthalmology', color: '#00BCD4', icon: '👁️' },
+  { name: 'Otolaryngology', color: '#795548', icon: '👂' },
+  { name: 'Anesthesiology', color: '#607D8B', icon: '💉' },
+  { name: 'Pathology', color: '#9E9E9E', icon: '🔬' }
+];
 
 const HomePage = () => {
   const { user } = useAuth();
@@ -13,16 +40,12 @@ const HomePage = () => {
   const [sortBy, setSortBy] = useState('newest');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterType, setFilterType] = useState('all');
+  const [inputValue, setInputValue] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const timeoutRef = useRef();
 
-  const medicalCategories = [
-    'all', 'General', 'Cardiology', 'Oncology', 'Pediatrics',
-    'Neurology', 'Surgery', 'Psychiatry', 'Radiology'
-  ];
-
-  const postTypes = [
-    'all', 'Discussion', 'Case Study', 'Research', 'Question'
-  ];
+  const medicalCategories = ['all', ...medicalSpecialties.map(s => s.name)];
+  const postTypes = ['all', 'Discussion', 'Case Study', 'Research', 'Question'];
 
   const handleDeletePost = async (postId) => {
     if (window.confirm('Are you sure you want to delete this post?')) {
@@ -42,21 +65,12 @@ const HomePage = () => {
     const fetchPosts = async () => {
       try {
         setLoading(true);
-
         let query = supabase
           .from('posts')
           .select(`
-            id,
-            title,
-            content,
-            raw_content,
-            post_category,
-            post_type,
-            urgency_level,
-            is_peer_reviewed,
-            created_at,
-            author:profiles!fk_author(name),
-            votes:post_votes!fk_post_id(direction)
+            id, title, content, raw_content, post_category, post_type,
+            urgency_level, is_peer_reviewed, created_at, attachments,
+            author:profiles!fk_author(name), votes:post_votes!fk_post_id(direction)
           `);
 
         if (filterCategory !== 'all') query = query.eq('post_category', filterCategory);
@@ -65,22 +79,32 @@ const HomePage = () => {
         const { data, error } = await query;
         if (error) throw error;
 
-        // Map upvotes
         let processed = data.map(post => ({
           ...post,
-          upvotes: post.votes.filter(v => v.direction === 1).length
+          upvotes: post.votes.filter(v => v.direction === 1).length,
+          image_url: post.attachments?.[0]?.url || null,
+          attachments: post.attachments || []
         }));
 
-        // Client-side search
         if (searchQuery.trim()) {
-          const q = searchQuery.toLowerCase();
-          processed = processed.filter(p => 
-            p.title.toLowerCase().includes(q) ||
-            p.raw_content.toLowerCase().includes(q)
-          );
+          const q = searchQuery.trim().toLowerCase();
+          const searchTerms = q.split(/\s+/);
+          
+          processed = processed.filter(p => {
+            const title = p.title?.toLowerCase() || '';
+            const content = p.raw_content?.toLowerCase() || '';
+            const category = p.post_category?.toLowerCase() || '';
+            const author = p.author?.name?.toLowerCase() || '';
+
+            return searchTerms.every(term =>
+              title.includes(term) ||
+              content.includes(term) ||
+              category.includes(term) ||
+              author.includes(term)
+            );
+          });
         }
 
-        // Sorting
         let sorted = [...processed];
         switch (sortBy) {
           case 'newest':
@@ -96,6 +120,8 @@ const HomePage = () => {
             break;
           case 'upvotes':
             sorted.sort((a, b) => b.upvotes - a.upvotes || new Date(b.created_at) - new Date(a.created_at));
+            break;
+          default:
             break;
         }
 
@@ -120,19 +146,24 @@ const HomePage = () => {
         )}
       </div>
 
-      {/* Search, Filter & Sort */}
       <div className="glass-panel p-6 mb-6 filter-card">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="filter-group">
+          <div className="filter-group-a">
             <div className="flex items-center gap-3 mb-2">
               <FaSearch className="text-primary-dark" />
               <label className="form-label filter-label">Search</label>
             </div>
             <input
               type="text"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search posts..."
+              value={inputValue}
+              onChange={(e) => {
+                setInputValue(e.target.value);
+                clearTimeout(timeoutRef.current);
+                timeoutRef.current = setTimeout(() => {
+                  setSearchQuery(e.target.value);
+                }, 300);
+              }}
+              placeholder="Search by title, content, category, or author..."
               className="filter-select"
             />
           </div>
@@ -144,7 +175,7 @@ const HomePage = () => {
             </div>
             <select
               value={sortBy}
-              onChange={e => setSortBy(e.target.value)}
+              onChange={(e) => setSortBy(e.target.value)}
               className="filter-select"
             >
               <option value="newest">Newest Posts</option>
@@ -161,14 +192,17 @@ const HomePage = () => {
             </div>
             <select
               value={filterCategory}
-              onChange={e => setFilterCategory(e.target.value)}
+              onChange={(e) => setFilterCategory(e.target.value)}
               className="filter-select"
             >
-              {medicalCategories.map(cat => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
+              {medicalCategories.map((cat) => {
+                const specialty = medicalSpecialties.find((s) => s.name === cat);
+                return (
+                  <option key={cat} value={cat}>
+                    {cat === 'all' ? 'All Categories' : `${specialty?.icon} ${cat}`}
+                  </option>
+                );
+              })}
             </select>
           </div>
 
@@ -179,10 +213,10 @@ const HomePage = () => {
             </div>
             <select
               value={filterType}
-              onChange={e => setFilterType(e.target.value)}
+              onChange={(e) => setFilterType(e.target.value)}
               className="filter-select"
             >
-              {postTypes.map(type => (
+              {postTypes.map((type) => (
                 <option key={type} value={type}>
                   {type}
                 </option>
@@ -205,6 +239,7 @@ const HomePage = () => {
               setFilterCategory('all');
               setFilterType('all');
               setSearchQuery('');
+              setInputValue('');
             }}
             className="btn btn-outline"
           >
@@ -212,14 +247,36 @@ const HomePage = () => {
           </button>
         </div>
       ) : (
-        <div className="space-y-4">
-          {posts.map(post => (
-            <PostCard
-              key={post.id}
-              post={{ ...post, votes: post.upvotes }}
-              onDelete={handleDeletePost}
-            />
-          ))}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {posts.map((post) => {
+            const specialty = medicalSpecialties.find(
+              (s) => s.name === post.post_category
+            );
+            
+            return (
+              <PostCard
+                key={post.id}
+                post={{ 
+                  ...post,
+                  categoryIcon: specialty?.icon || '📄',
+                  categoryColor: specialty?.color || '#666',
+                  id: post.id,
+                  title: post.title,
+                  raw_content: post.raw_content,
+                  post_category: post.post_category,
+                  post_type: post.post_type,
+                  urgency_level: post.urgency_level,
+                  is_peer_reviewed: post.is_peer_reviewed,
+                  created_at: post.created_at,
+                  author: post.author,
+                  votes: post.upvotes,
+                  attachments: post.attachments,
+                  image_url: post.attachments?.[0]?.url || null
+                }}
+                onDelete={handleDeletePost}
+              />
+            );
+          })}
         </div>
       )}
     </div>

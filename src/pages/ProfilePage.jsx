@@ -1,4 +1,3 @@
-import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { supabase } from '../config/supabase';
 import Avatar from '../components/Avatar';
